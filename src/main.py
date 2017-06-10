@@ -4,6 +4,7 @@ import argparse
 import logger
 import engine
 import well
+from utils import *
 
 
 EXIT_ERROR = 1
@@ -38,7 +39,8 @@ class Args:
     def main(self):
         modes = {
             "rule": self.rules,
-            "test": self.find_and_test
+            "test": self.test_rules,
+            "scan": self.scan_path
         }
 
         parser = argparse.ArgumentParser(
@@ -53,13 +55,57 @@ class Args:
         return modes[args.mode]()
 
 
-    def find_and_test(self):
+    def scan_path(self):
+        parser = argparse.ArgumentParser(
+            description="Scan path",
+            prog=self.prog_name
+        )
+        parser.add_argument("--database", help="database to store rule",
+                            metavar="path")
+        parser.add_argument("--max-depth", type=int, default=-1,
+                            help="maximum depth to scan",
+                            metavar="d")
+        parser.add_argument("-r", "--recursive", action="store_true",
+                            help="scan recursively")
+        parser.add_argument("--rule", help="id or surname of a rule")
+        parser.add_argument("paths", help="file or folder", metavar="path",
+                            nargs="*")
+        args = parser.parse_args(self.args[1:])
+
+        logger.info("action: scan")
+        self.app.load_rules(args.database)
+        counter = 0
+        files_counter = 0
+        args.paths = args.paths if args.paths else (".",)
+        for entry in scan_fs(args.paths, max_depth=args.max_depth,
+                             recursive=args.recursive):
+            prev_counter = counter
+
+            for (rule, match) in self.app.rules.find_applying(entry, args.rule):
+                counter += 1
+                if rule.surname:
+                    print("{}:{}: {}".format(rule.guid, rule.surname,
+                                             rule.format(match)))
+                else:
+                    print("{}: {}".format(rule.guid, rule.format(match)))
+
+            if prev_counter != counter:
+                files_counter += 1
+
+        logger.info("Scan and tested on {} files, {} matches"
+                    .format(files_counter, counter))
+        print("Files: {}".format(files_counter))
+        print("Count: {}".format(counter))
+
+
+    def test_rules(self):
         parser = argparse.ArgumentParser(
             description="Find and test rules applying",
             prog=self.prog_name
         )
         parser.add_argument("--database", help="database to store rule",
                             metavar="path")
+# TODO change surname to rule (id or surname)
         parser.add_argument("surname", help="surname of one rule", nargs="?")
         parser.add_argument("entry", help="entry to test")
         args = parser.parse_args(self.args[1:])
