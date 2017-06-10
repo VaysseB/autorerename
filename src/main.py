@@ -29,6 +29,7 @@ class Args:
                           if name is None
                           else name)
         self.args = list((sys.argv[1:] if args is None else args)[:])
+        logger.info("cmd args: %s", " ".join(self.args))
 
 
     def main(self):
@@ -50,7 +51,8 @@ class Args:
 
     def rules(self):
         actions = {
-            "add": self.rules_add
+            "add": self.rules_add,
+            "list": self.rules_list
         }
 
         parser = argparse.ArgumentParser(
@@ -77,11 +79,27 @@ class Args:
                             help="format rule to rename filename")
         args = parser.parse_args(self.args[2:])
 
-        logger.info("cmd args: %s", " ".join(self.args))
         logger.info("action: add a rule")
         self.app.load_rules(args.database)
         self.app.rules.add(args.id_rule, args.rename_rule)
         self.app.save_rules()
+
+
+    def rules_list(self):
+        parser = argparse.ArgumentParser(
+            description="List rules",
+            prog=self.prog_name
+        )
+        parser.add_argument("--database", help="database to store rule",
+                            metavar="path")
+        args = parser.parse_args(self.args[2:])
+
+        logger.info("action: list rules")
+        self.app.load_rules(args.database)
+        print("Number of rules: {}".format(len(self.app.rules)))
+        for (id_rule, ft_rule) in self.app.rules.as_plain_text:
+            print("Rule: {}  ->  {}".format(id_rule, ft_rule))
+
 
 
 if __name__ == "__main__":
