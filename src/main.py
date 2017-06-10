@@ -105,8 +105,7 @@ class Args:
         )
         parser.add_argument("--database", help="database to store rule",
                             metavar="path")
-# TODO change surname to rule (id or surname)
-        parser.add_argument("surname", help="surname of one rule", nargs="?")
+        parser.add_argument("--rule", help="id or surname of a rule")
         parser.add_argument("entry", help="entry to test")
         args = parser.parse_args(self.args[1:])
 
@@ -114,7 +113,7 @@ class Args:
         self.app.load_rules(args.database)
         counter = 0
         for (rule, match) in self.app.rules.find_applying(args.entry,
-                                                          args.surname):
+                                                          args.rule):
             counter += 1
             if rule.surname:
                 print("{}:{}: {}".format(rule.guid, rule.surname,
