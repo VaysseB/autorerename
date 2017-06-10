@@ -6,6 +6,9 @@ import engine
 import well
 
 
+EXIT_ERROR = 1
+
+
 class App:
     def __init__(self):
         self.rules = None
@@ -46,13 +49,14 @@ class Args:
         args = parser.parse_args(self.args[0:1])
 
         self.prog_name += " " + args.mode
-        modes[args.mode]()
+        return modes[args.mode]()
 
 
     def rules(self):
         actions = {
             "add": self.rules_add,
-            "list": self.rules_list
+            "list": self.rules_list,
+            "remove": self.rules_remove
         }
 
         parser = argparse.ArgumentParser(
@@ -63,7 +67,7 @@ class Args:
         args = parser.parse_args(self.args[1:2])
 
         self.prog_name += " " + args.action
-        actions[args.action]()
+        return actions[args.action]()
 
 
     def rules_add(self):
@@ -102,6 +106,23 @@ class Args:
                   .format(rule["guid"], rule["id"], rule["ft"]))
 
 
+    def rules_remove(self):
+        parser = argparse.ArgumentParser(
+            description="Remove a rule",
+            prog=self.prog_name
+        )
+        parser.add_argument("rule_id", help="unique id of the rule")
+        parser.add_argument("--database", help="database to store rule",
+                            metavar="path")
+        args = parser.parse_args(self.args[2:])
+
+        logger.info("action: remove rule")
+        self.app.load_rules(args.database)
+        if not self.app.rules.remove(args.rule_id):
+            return EXIT_ERROR
+        self.app.save_rules()
+
 
 if __name__ == "__main__":
-    Args().main()
+    ret = Args().main()
+    exit(0 if ret is None else ret)

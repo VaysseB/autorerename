@@ -41,7 +41,7 @@ class Rules:
 
     def __init__(self):
         # list of Rule
-        self.rules = set()
+        self.rules = {}
 
 
     def add(self, id_rule: str, rename_rule: str, guid=None) -> bool:
@@ -62,13 +62,27 @@ class Rules:
             return False
 
         rule.guid = guid
-        self.rules.add(rule)
+        self.rules[guid] = rule
+        return True
+
+
+    def remove(self, guid) -> bool:
+        logger.debug("Remove rule {}".format(guid))
+        rule = self.rules.pop(guid, None)
+
+        if rule is None:
+            logger.debug("No such rule {}".format(guid))
+            return False
+
+        logger.debug("Found rule {}: {} {}".format(guid,
+                                                   rule.identifier.pattern,
+                                                   rule.renamer))
         return True
 
 
     @property
     def as_plain_text(self):
-        for rule in self.rules:
+        for rule in self.rules.values():
             yield rule.as_dict
 
 
@@ -78,5 +92,5 @@ class Rules:
 
     def find_rule_for(self, path: str):
         return first_map(lambda r: r.is_applying(path),
-                         self.rules)
+                         self.rules.values())
 
