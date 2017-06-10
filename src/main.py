@@ -60,13 +60,15 @@ class Args:
         )
         parser.add_argument("--database", help="database to store rule",
                             metavar="path")
+        parser.add_argument("surname", help="surname of one rule", nargs="?")
         parser.add_argument("entry", help="entry to test")
         args = parser.parse_args(self.args[1:])
 
         logger.info("action: test")
         self.app.load_rules(args.database)
-        counter = False
-        for (rule, match) in self.app.rules.find_applying(args.entry):
+        counter = 0
+        for (rule, match) in self.app.rules.find_applying(args.entry,
+                                                          args.surname):
             counter += 1
             if rule.surname:
                 print("{}:{}: {}".format(rule.guid, rule.surname,

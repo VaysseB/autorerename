@@ -89,8 +89,12 @@ class Rules:
         logger.debug("Found rule {}".format(rule.inline()))
         return True
 
-    def find_applying(self, path: str) -> ((Rule, re.match)):
-        for rule in self.rules.values():
+    def find_applying(self, path: str, surname: str=None) -> ((Rule, re.match)):
+        items = iter(self.rules.values())
+        if surname:
+            items = filter(lambda r: r.surname == surname, items)
+
+        for rule in items:
             match = rule.match(path)
             if match:
                 yield (rule, match)
