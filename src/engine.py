@@ -2,6 +2,7 @@
 import re
 import itertools
 
+import logger
 from utils import *
 
 
@@ -24,15 +25,13 @@ class Rules:
     """
 
     def __init__(self):
-        self.dbpath = None
-
         # list of Rule
         self.rules = []
 
 
-    def add(self, pair: (str, str)):
-        id_rule, rename_rule = pair
-        rule = Rule(re.compile(id_rule, rename_rule))
+    def add(self, id_rule: str, rename_rule: str):
+        logger.debug("Add a rule: '{}' '{}'".format(id_rule, rename_rule))
+        rule = Rule(re.compile(id_rule), rename_rule)
         self.rules.append(rule)
 
 
