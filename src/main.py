@@ -68,7 +68,11 @@ class Args:
         counter = False
         for (rule, match) in self.app.rules.find_applying(args.entry):
             counter += 1
-            print("{}: {}".format(rule.guid, rule.format(match)))
+            if rule.surname:
+                print("{}:{}: {}".format(rule.guid, rule.surname,
+                                         rule.format(match)))
+            else:
+                print("{}: {}".format(rule.guid, rule.format(match)))
 
         logger.info("Found and tested on {} rules".format(counter))
         print("Count: {}".format(counter))
@@ -103,11 +107,16 @@ class Args:
                             help="regular expression to identify filename")
         parser.add_argument("rename_rule",
                             help="format rule to rename filename")
+        parser.add_argument("surname",
+                            nargs="?",
+                            help="surname of the rule")
         args = parser.parse_args(self.args[2:])
 
         logger.info("action: add a rule")
         self.app.load_rules(args.database)
-        self.app.rules.add(args.id_rule, args.rename_rule)
+        self.app.rules.add(id_rule=args.id_rule,
+                           rename_rule=args.rename_rule,
+                           surname=args.surname)
         self.app.save_rules()
 
 
@@ -123,9 +132,8 @@ class Args:
         logger.info("action: list rules")
         self.app.load_rules(args.database)
         print("Count: {}".format(len(self.app.rules)))
-        for rule in self.app.rules.as_plain_text:
-            print("Rule {}: {} -> {}"
-                  .format(rule["guid"], rule["id"], rule["ft"]))
+        for rule in self.app.rules:
+            print("Rule {}".format(rule.inline()))
 
 
     def rules_remove(self):

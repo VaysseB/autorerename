@@ -17,6 +17,7 @@ class Rule:
         self.identifier = re.compile(identify)
         self.renamer = rename
         self.guid = guid
+        self.surname = None
 
     def __eq__(self, other):
         if isinstance(other, Rule):
@@ -30,12 +31,20 @@ class Rule:
         return self.identifier.match(path)
 
     def format(self, match: re.match):
-        groups = {name: match.group(name) for name in match.groups()}
-        return self.renamer.format(**groups)
+        return self.renamer.format(None, *match.groups(), **match.groupdict())
 
     @property
     def as_dict(self):
-        return {"guid": self.guid, "id": self.identifier.pattern, "ft": self.renamer}
+        return {"guid": self.guid, "id": self.identifier.pattern,
+                "ft": self.renamer, "snm": self.surname}
+
+    def inline(self) -> str:
+        text = "{}: {} -> {}".format(self.guid,
+                                     self.identifier.pattern,
+                                     self.renamer)
+        if self.surname:
+            text += " [" + self.surname + "]"
+        return text
 
 
 class Rules:
@@ -47,10 +56,11 @@ class Rules:
         # list of Rule
         self.rules = {}
 
-
-    def add(self, id_rule: str, rename_rule: str, guid=None) -> bool:
-        logger.debug("Add rule {}: '{}' '{}'".format(guid, id_rule, rename_rule))
+    def add(self, id_rule: str, rename_rule: str, guid=None, surname: str=None) -> bool:
         rule = Rule(re.compile(id_rule), rename_rule)
+        rule.surname = surname
+        rule.guid = guid
+        logger.debug("Add rule {}".format(rule.inline()))
 
         if guid is None:
             while guid is None or guid in self.rules:
@@ -59,16 +69,14 @@ class Rules:
                 m.update(rename_rule.encode("utf8"))
                 m.update(datetime.datetime.today().isoformat().encode("utf8"))
                 guid = m.hexdigest()[:12]
+            rule.guid = guid
             logger.debug("create id '{}' for rule".format(guid))
         elif guid in self.rules:
-            logger.debug("already existing rule {}: {} {}"
-                         .format(guid, id_rule, rename_rule))
+            logger.debug("already existing rule {}", rule.inline())
             return False
 
-        rule.guid = guid
-        self.rules[guid] = rule
+        self.rules[rule.guid] = rule
         return True
-
 
     def remove(self, guid) -> bool:
         logger.debug("Remove rule {}".format(guid))
@@ -78,11 +86,8 @@ class Rules:
             logger.debug("No such rule {}".format(guid))
             return False
 
-        logger.debug("Found rule {}: {} {}".format(guid,
-                                                   rule.identifier.pattern,
-                                                   rule.renamer))
+        logger.debug("Found rule {}".format(rule.inline()))
         return True
-
 
     def find_applying(self, path: str) -> ((Rule, re.match)):
         for rule in self.rules.values():
@@ -90,18 +95,17 @@ class Rules:
             if match:
                 yield (rule, match)
 
-
     @property
     def as_plain_text(self):
         for rule in self.rules.values():
             yield rule.as_dict
 
-
     def __len__(self):
         return len(self.rules)
 
+    def __iter__(self) -> Rule:
+        return iter(self.rules.values())
 
     def find_rule_for(self, path: str):
         return first_map(lambda r: r.match(path),
                          self.rules.values())
-

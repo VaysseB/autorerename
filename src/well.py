@@ -55,8 +55,9 @@ def load_rules(path: str) -> engine.Rules:
 
         for thing in data.get("rules", ()):
             rules.add(id_rule=thing["id"],
-                     rename_rule=thing["ft"],
-                     guid=thing["guid"])
+                      rename_rule=thing["ft"],
+                      guid=thing["guid"],
+                      surname=thing["snm"])
 
         logger.info("Loaded %d rules", len(rules))
 
