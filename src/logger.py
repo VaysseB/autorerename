@@ -6,10 +6,16 @@ def local_path(filename: str):
     return os.path.join(root_dir, filename)
 
 
+def load_debug_conf():
+    import os
+    return os.environ.get("DEBUG", False) in (1, "1", "True", "TRUE")
+
+
 import logging
 import logging.config
 
-logging.config.fileConfig(local_path("./log_conf_dev_console.ini"))
+if load_debug_conf():
+    logging.config.fileConfig(local_path("./log_conf_dev_console.ini"))
 
 # shorthand
 info =      logging.root.info
