@@ -39,7 +39,7 @@ class Rule:
                 "ft": self.renamer, "snm": self.surname}
 
     def inline(self) -> str:
-        text = "{}: {} -> {}".format(self.guid,
+        text = "{}: '{}' ==> '{}'".format(self.guid,
                                      self.identifier.pattern,
                                      self.renamer)
         if self.surname:
