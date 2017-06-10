@@ -33,7 +33,7 @@ def load_rules(path: str) -> engine.Rules:
 
     if not os.path.exists(path):
         logger.info("database path doesn't exists {}".format(path))
-        raise RuntimeError("invalid path {}".format(path))
+        return rules
     # special cases for pickle if input is empty
     elif os.path.getsize(path) <= 0:
         logger.info("empty database")
@@ -53,8 +53,10 @@ def load_rules(path: str) -> engine.Rules:
             raise RuntimeError("cannot load data from version {}"
                                .format(version))
 
-        for (a, b) in data.get("rules", ()):
-            rules.add(a, b)
+        for thing in data.get("rules", ()):
+            rules.add(id_rule=thing["id"],
+                     rename_rule=thing["ft"],
+                     guid=thing["guid"])
 
         logger.info("Loaded %d rules", len(rules))
 

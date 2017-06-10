@@ -97,8 +97,9 @@ class Args:
         logger.info("action: list rules")
         self.app.load_rules(args.database)
         print("Number of rules: {}".format(len(self.app.rules)))
-        for (id_rule, ft_rule) in self.app.rules.as_plain_text:
-            print("Rule: {}  ->  {}".format(id_rule, ft_rule))
+        for rule in self.app.rules.as_plain_text:
+            print("Rule {}: {} -> {}"
+                  .format(rule["guid"], rule["id"], rule["ft"]))
 
 
 
