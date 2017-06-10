@@ -26,7 +26,7 @@ class Rule:
     def __hash__(self):
         return hash(self.guid)
 
-    def is_applying(self, path: str):
+    def match(self, path: str):
         return self.identifier.match(path)
 
     def format(self, match: re.match):
@@ -86,7 +86,7 @@ class Rules:
 
     def find_applying(self, path: str) -> ((Rule, re.match)):
         for rule in self.rules.values():
-            match = rule.identifier.match(path)
+            match = rule.match(path)
             if match:
                 yield (rule, match)
 
@@ -102,6 +102,6 @@ class Rules:
 
 
     def find_rule_for(self, path: str):
-        return first_map(lambda r: r.is_applying(path),
+        return first_map(lambda r: r.match(path),
                          self.rules.values())
 

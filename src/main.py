@@ -71,12 +71,7 @@ class Args:
             print("{}: {}".format(rule.guid, rule.format(match)))
 
         logger.info("Found and tested on {} rules".format(counter))
-        if counter <= 0:
-            print("No rules match.")
-        elif counter == 1:
-            print("1 rule matches.")
-        else:
-            print("{} rules match.".format(counter))
+        print("Count: {}".format(counter))
 
 
     def rules(self):
@@ -127,7 +122,7 @@ class Args:
 
         logger.info("action: list rules")
         self.app.load_rules(args.database)
-        print("Number of rules: {}".format(len(self.app.rules)))
+        print("Count: {}".format(len(self.app.rules)))
         for rule in self.app.rules.as_plain_text:
             print("Rule {}: {} -> {}"
                   .format(rule["guid"], rule["id"], rule["ft"]))
