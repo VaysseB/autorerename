@@ -37,7 +37,8 @@ class Args:
 
     def main(self):
         modes = {
-            "rule": self.rules
+            "rule": self.rules,
+            "test": self.find_and_test
         }
 
         parser = argparse.ArgumentParser(
@@ -50,6 +51,32 @@ class Args:
 
         self.prog_name += " " + args.mode
         return modes[args.mode]()
+
+
+    def find_and_test(self):
+        parser = argparse.ArgumentParser(
+            description="Find and test rules applying",
+            prog=self.prog_name
+        )
+        parser.add_argument("--database", help="database to store rule",
+                            metavar="path")
+        parser.add_argument("entry", help="entry to test")
+        args = parser.parse_args(self.args[1:])
+
+        logger.info("action: test")
+        self.app.load_rules(args.database)
+        counter = False
+        for (rule, match) in self.app.rules.find_applying(args.entry):
+            counter += 1
+            print("{}: {}".format(rule.guid, rule.format(match)))
+
+        logger.info("Found and tested on {} rules".format(counter))
+        if counter <= 0:
+            print("No rules match.")
+        elif counter == 1:
+            print("1 rule matches.")
+        else:
+            print("{} rules match.".format(counter))
 
 
     def rules(self):

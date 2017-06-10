@@ -29,6 +29,10 @@ class Rule:
     def is_applying(self, path: str):
         return self.identifier.match(path)
 
+    def format(self, match: re.match):
+        groups = {name: match.group(name) for name in match.groups()}
+        return self.renamer.format(**groups)
+
     @property
     def as_dict(self):
         return {"guid": self.guid, "id": self.identifier.pattern, "ft": self.renamer}
@@ -78,6 +82,13 @@ class Rules:
                                                    rule.identifier.pattern,
                                                    rule.renamer))
         return True
+
+
+    def find_applying(self, path: str) -> ((Rule, re.match)):
+        for rule in self.rules.values():
+            match = rule.identifier.match(path)
+            if match:
+                yield (rule, match)
 
 
     @property
