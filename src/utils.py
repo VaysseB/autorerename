@@ -33,7 +33,7 @@ def scan_fs(paths, max_depth: int, recursive: bool) -> str:
         for entry in os.listdir(root):
             entry = os.path.join(root, entry)
             if os.path.isdir(entry) and limit_depth != 0:
-                yield from scan_folder(entry, limit_depth)
+                yield from scan_folder(entry, limit_depth-1)
             elif os.path.isfile(entry):
                 yield entry
 
