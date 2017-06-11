@@ -106,10 +106,10 @@ class Rules:
             logger.debug("create id '{}' for rule".format(guid))
         elif guid in self.rules:
             logger.debug("already existing rule {}".format(guid))
-            return False
+            return
 
         self.rules[rule.guid] = rule
-        return True
+        return rule
 
     def remove(self, guid) -> bool:
         logger.debug("Remove rule {}".format(guid))

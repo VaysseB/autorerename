@@ -40,16 +40,21 @@ class RuleCommands(Commands):
         self.config = config
 
 
+    def _add_rule(self, rules: engine.Rules, args):
+        rule = rules.add(
+            id_rule=args.id_rule,
+            rename_rule=args.rename_rule,
+            surname=getattr(args, "surname", None),
+            match_fullpath=getattr(args, "fullpath", False))
+        return rule
+
+
     def add(self, args):
         logger.info("action: add a rule")
 
         app = App()
         app.load_rules(args.dbpath)
-
-        app.rules.add(id_rule=args.id_rule,
-                      rename_rule=args.rename_rule,
-                      surname=args.surname,
-                      match_fullpath=args.fullpath)
+        self._add_rule(app.rules, args)
         app.save_rules()
 
 
@@ -86,10 +91,20 @@ class RuleCommands(Commands):
         app = App()
         app.load_rules(args.dbpath)
 
-        counter = 0
         for entry in args.entries:
             count = self.apply(app.rules, entry, args.rule)
             logger.info("Found and tested on {} rules".format(count))
+
+    def manual_test(self, args):
+        logger.info("action: manual test")
+
+        rules = engine.Rules()
+        rule = self._add_rule(rules, args)
+
+        for entry in args.entries:
+            count = self.apply(rules, entry)
+            logger.info("Tested {} -> {} on {} rules".format(
+                rule.identifier_as_text, rule.renamer_as_text, count))
 
 
 class FolderCommands(Commands):
@@ -132,6 +147,7 @@ class Args:
             help="Mode to use")
         self.install_scan_path(subparsers)
         self.install_test_rules(subparsers)
+        self.install_manual_test(subparsers)
         rule_parser = self.install_rules(subparsers)
 
         args = parser.parse_args()
@@ -155,6 +171,7 @@ class Args:
             "_help": mode_help,
             "scan": fc.scan,
             "test": rc.test,
+            "manual-test": rc.manual_test,
             "rules": {
                 "_key": "action",
                 "_help": rule_help,
@@ -267,6 +284,22 @@ class Args:
                             help="entry to test",
                             metavar="entry",
                             nargs="+")
+        return parser
+
+
+    def install_manual_test(self, subparser):
+        parser = subparser.add_parser(
+            "manual-test",
+            help="Manual test with rule specification."
+        )
+        parser.add_argument("id_rule",
+                            help="regular expression to identify filename")
+        parser.add_argument("rename_rule",
+                            help="format rule to rename filename")
+        parser.add_argument("entries",
+                            help="entry to test",
+                            metavar="entry",
+                            nargs="*")
         return parser
 
 
