@@ -155,9 +155,22 @@ class Training:
     def create(self, name: str) -> bool:
         logger.info("create training dataset {}".format(name))
         if name in self.material:
-            logger.debug("training dataset {} already exists".format(name))
-            return False
-        self.material[name] = []
+            logger.warn("training dataset {} already exists".format(name))
+            return
+        self.material[name] = ret = []
+        return ret
+
+    def insert(self, name: str, data, create_if: bool=False) -> bool:
+        logger.info("insert data for training {}".format(name))
+        dataset = self.material.get(name, None)
+        if dataset is None:
+            if create_if:
+                dataset = self.create(name)
+                assert dataset is not None, "internal error: impossible situation"
+            else:
+                logger.warn("no training dataset {}".format(name))
+                return False
+        dataset.extend(list(data))
         return True
 
     def __len__(self):

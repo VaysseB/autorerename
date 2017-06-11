@@ -177,7 +177,15 @@ class TrainingCommands(Commands):
         for (name, data) in ds:
             print("Dataset", name)
             for d in data:
-                print(" ", d)
+                print(" '", d, "'", sep="")
+
+    def insert(self, args):
+        logger.info("training insert into dataset")
+
+        app = App()
+        app.load_training(self.config.trpath)
+        app.training.insert(args.name, args.entries, args.creation)
+        app.save_training()
 
 
 class Args:
@@ -239,7 +247,8 @@ class Args:
                 "_key": "action",
                 "_help": train_help,
                 "create": tc.create,
-                "list": tc.list
+                "list": tc.list,
+                "insert": tc.insert
             }
         }
 
@@ -439,6 +448,7 @@ class Args:
             help="Action to do")
         self.install_create_training_dataset(subsubparser)
         self.install_list_training_dataset(subsubparser)
+        self.install_insert_into_training_dataset(subsubparser)
         return parser
 
 
@@ -467,6 +477,23 @@ class Args:
                             nargs="*")
         return parser
 
+    def install_insert_into_training_dataset(self, subparser):
+        parser = subparser.add_parser(
+            "insert",
+            help="Insert data into training dataset."
+        )
+        self._add_conf(parser, depth=3)
+        parser.add_argument("name",
+                            help="training dataset name")
+        parser.add_argument("entries",
+                            help="training entry",
+                            nargs="*",
+                            metavar="entry")
+        parser.add_argument("--create",
+                            help="create dataset if doesn't exist",
+                            action="store_true",
+                            dest="creation")
+        return parser
 
 
 if __name__ == "__main__":
