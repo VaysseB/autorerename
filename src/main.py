@@ -151,6 +151,8 @@ class FolderCommands(Commands):
 
         app = App()
         app.load_rules(args.dbpath)
+        if args.save_trds:
+            app.load_training(self.config.trpath)
 
         total = 0
         files_counter = 0
@@ -161,10 +163,25 @@ class FolderCommands(Commands):
             if count > 0:
                 files_counter += 1
 
+                if args.save_trds:
+                    if args.save_fullpath:
+                        text = entry
+                    else:
+                        text = os.path.basename(entry)
+
+                    app.training.insert(args.save_trds,
+                                        (text,),
+                                        create_if=True)
+
+
+        #
         logger.info("Scan and tested on {} files, with {} renames"
                     .format(files_counter, total))
         if files_counter > 0:
             print("Files: {}".format(files_counter))
+
+        if args.save_trds:
+            app.save_training()
 
 
 class TrainingCommands(Commands):
@@ -365,6 +382,13 @@ class Args:
                             metavar="path",
                             nargs="*",
                             default=(".",))
+        parser.add_argument("--save-training",
+                            help="save to training dataset",
+                            metavar="name",
+                            dest="save_trds")
+        parser.add_argument("--save-fullpath",
+                            help="save full path to training dataset",
+                            action="store_true")
         return parser
 
 
