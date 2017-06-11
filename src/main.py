@@ -24,7 +24,6 @@ class App:
 
 
 class Args:
-
     def __init__(self, name=None, args=None):
         self.app = App()
 
@@ -44,7 +43,7 @@ class Args:
         }
 
         parser = argparse.ArgumentParser(
-            description="TODO",
+            description="File identification and rename action.",
             prog=self.prog_name
         )
         parser.add_argument("mode", choices=modes.keys(),
@@ -57,7 +56,7 @@ class Args:
 
     def scan_path(self):
         parser = argparse.ArgumentParser(
-            description="Scan path",
+            description="Scan path for rule application.",
             prog=self.prog_name
         )
         parser.add_argument("--database", help="database to store rule",
@@ -100,7 +99,7 @@ class Args:
 
     def test_rules(self):
         parser = argparse.ArgumentParser(
-            description="Find and test rules applying",
+            description="Find and test rules application.",
             prog=self.prog_name
         )
         parser.add_argument("--database", help="database to store rule",
@@ -133,7 +132,7 @@ class Args:
         }
 
         parser = argparse.ArgumentParser(
-            description="Manage rules",
+            description="Manage rules.",
             prog=self.prog_name
         )
         parser.add_argument("action", choices=actions.keys())
@@ -145,7 +144,7 @@ class Args:
 
     def rules_add(self):
         parser = argparse.ArgumentParser(
-            description="Add a rule",
+            description="Add a rule.",
             prog=self.prog_name
         )
         parser.add_argument("--database", help="database to store rule",
@@ -169,7 +168,7 @@ class Args:
 
     def rules_list(self):
         parser = argparse.ArgumentParser(
-            description="List rules",
+            description="List rules.",
             prog=self.prog_name
         )
         parser.add_argument("--database", help="database to store rule",
@@ -185,7 +184,7 @@ class Args:
 
     def rules_remove(self):
         parser = argparse.ArgumentParser(
-            description="Remove a rule",
+            description="Remove a rule.",
             prog=self.prog_name
         )
         parser.add_argument("rule_id", help="unique id of the rule")
