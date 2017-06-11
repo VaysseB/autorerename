@@ -60,7 +60,13 @@ class RuleCommands(Commands):
         app.load_rules(args.dbpath)
 
         for rule in app.rules:
-            print("Rule {}".format(rule.info_inline()))
+            print("Rule", rule.guid,
+                  ((" as " + rule.surname) if rule.surname else ""))
+            print("  from '" + rule.identifier_as_text + "'")
+            print("    to '" + rule.renamer_as_text + "'")
+            print("  options:", ("name only"
+                                   if rule.only_filename
+                                   else "full path"))
 
 
     def remove(self, args):

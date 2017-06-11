@@ -30,6 +30,14 @@ class Rule:
     def only_filename(self):
         return not self.fullpath
 
+    @property
+    def identifier_as_text(self):
+        return self.identifier.pattern
+
+    @property
+    def renamer_as_text(self):
+        return self.renamer
+
     def __eq__(self, other):
         if isinstance(other, Rule):
             return self.guid == other.guid
@@ -63,16 +71,6 @@ class Rule:
             self.guid,
             self.identifier.pattern,
             self.renamer)
-        if self.surname:
-            text += " [" + self.surname + "]"
-        return text
-
-    def info_inline(self) -> str:
-        text = self.inline()
-        if self.only_filename:
-            text += " # name only"
-        else:
-            text += " # full path"
         return text
 
 
@@ -95,7 +93,7 @@ class Rules:
         rule.surname = surname
         rule.fullpath = match_fullpath
         rule.guid = guid
-        logger.debug("Add rule {}".format(rule.inline()))
+        logger.debug("Add rule {}".format(rule.guid))
 
         if guid is None:
             while guid is None or guid in self.rules:
@@ -107,7 +105,7 @@ class Rules:
             rule.guid = guid
             logger.debug("create id '{}' for rule".format(guid))
         elif guid in self.rules:
-            logger.debug("already existing rule {}", rule.inline())
+            logger.debug("already existing rule {}".format(guid))
             return False
 
         self.rules[rule.guid] = rule
@@ -121,7 +119,7 @@ class Rules:
             logger.debug("No such rule {}".format(guid))
             return False
 
-        logger.debug("Found rule {}".format(rule.inline()))
+        logger.debug("Found rule {}".format(guid))
         return True
 
     def find_applying(self, path: str, surname_or_id: str=None) -> ((Rule, re.match)):
