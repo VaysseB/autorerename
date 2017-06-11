@@ -49,6 +49,14 @@ class Commands:
             print("{}: '{}' --> '{}'".format(text, entry, result))
         return counter
 
+    def select_trds(self, training: engine.Training, names: tuple=()) -> tuple:
+        if names:
+            return filter(lambda x: x != (),
+                          (training.get(n) for n in names))
+        else:
+            return iter(training)
+
+
 
 class RuleCommands(Commands):
     def __init__(self, config: conf.Conf):
@@ -106,9 +114,19 @@ class RuleCommands(Commands):
         app = App()
         app.load_rules(args.dbpath)
 
+        if args.trnames:
+            app.load_training(self.config.trpath)
+
+            for (trname, tr_dataset) in self.select_trds(app.training, args.trnames):
+                for entry in tr_dataset:
+                    count = self.apply(app.rules, entry, args.rule)
+                    logger.info("Found and tested on {} times from {}"
+                                .format(count, trname))
+
+        #
         for entry in args.entries:
             count = self.apply(app.rules, entry, args.rule)
-            logger.info("Found and tested on {} rules".format(count))
+            logger.info("Found and tested {} times".format(count))
 
 
     def manual_test(self, args):
@@ -170,14 +188,8 @@ class TrainingCommands(Commands):
         app = App()
         app.load_training(self.config.trpath)
 
-        ds = None
-        if args.names:
-            ds = filter(lambda x: x != (),
-                        (app.training.get(n) for n in args.names))
-        else:
-            ds = iter(app.training)
 
-        for (name, data) in ds:
+        for (name, data) in self.select_trds(app.training, args.names):
             print("Dataset", name)
             for d in data:
                 print(" '", d, "'", sep="")
@@ -366,10 +378,15 @@ class Args:
         parser.add_argument("--rule",
                             help="id or surname of a rule",
                             metavar="r")
+        parser.add_argument("--train",
+                            help="training dataset name",
+                            metavar="name",
+                            dest="trnames",
+                            action="append")
         parser.add_argument("entries",
                             help="entry to test",
                             metavar="entry",
-                            nargs="+")
+                            nargs="*")
         return parser
 
 
