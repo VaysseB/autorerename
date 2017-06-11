@@ -108,7 +108,6 @@ class FolderCommands:
             print("Files: {}".format(files_counter))
 
 
-
 class Args:
     def __init__(self, name=None, args=None):
         import sys
@@ -152,9 +151,8 @@ class Args:
                             help="scan recursively")
         parser.add_argument("--rule", help="id or surname of a rule")
         parser.add_argument("paths", help="file or folder", metavar="path",
-                            nargs="*")
+                            nargs="*", default=(".",))
         args = parser.parse_args(self.args[1:])
-        args.paths = args.paths if args.paths else (".",)
         FolderCommands().scan(args)
 
 
