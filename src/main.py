@@ -36,7 +36,8 @@ class RuleCommands:
 
         app.rules.add(id_rule=args.id_rule,
                       rename_rule=args.rename_rule,
-                      surname=args.surname)
+                      surname=args.surname,
+                      match_fullpath=args.fullpath)
         app.save_rules()
 
 
@@ -47,7 +48,7 @@ class RuleCommands:
         app.load_rules(args.dbpath)
 
         for rule in app.rules:
-            print("Rule {}".format(rule.inline()))
+            print("Rule {}".format(rule.info_inline()))
 
 
     def remove(self, args):
@@ -68,15 +69,10 @@ class RuleCommands:
         app.load_rules(args.dbpath)
 
         counter = 0
-        for (rule, match) in app.rules.find_applying(args.entry, args.rule):
+        for (rule, entry, match) in app.rules.find_applying(args.entry, args.rule):
             counter += 1
-            if rule.surname:
-                print("{}:{}: {}".format(rule.guid,
-                                         rule.surname,
-                                         rule.format(match)))
-            else:
-                print("{}: {}".format(rule.guid,
-                                      rule.format(match)))
+            text = rule.name_prefix()
+            print(text + ": " + rule.format(entry, match))
 
         logger.info("Found and tested on {} rules".format(counter))
 
@@ -97,12 +93,10 @@ class FolderCommands:
                              recursive=args.recursive):
             prev_counter = counter
 
-            for (rule, match) in app.rules.find_applying(entry, args.rule):
+            for (rule, entry, match) in app.rules.find_applying(entry, args.rule):
                 counter += 1
-                header = rule.guid + ":" + (
-                    (rule.surname + ":") if rule.surname else "")
-                new_path = rule.format(match)
-                print(header, entry, " --> ", new_path)
+                text = rule.name_prefix()
+                print(text + ": " + entry + " --> " + rule.format(entry, match))
 
             if prev_counter != counter:
                 files_counter += 1
@@ -264,6 +258,10 @@ class Args:
         parser.add_argument("surname",
                             nargs="?",
                             help="surname of the rule")
+        parser.add_argument("--fullpath",
+                            help=("match full path of file "
+                            "instead of file name only"),
+                            action="store_true")
         return parser
 
 

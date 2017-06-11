@@ -3,6 +3,7 @@ import re
 import itertools
 import hashlib
 import datetime
+import os.path
 
 import logger
 from utils import *
@@ -18,6 +19,16 @@ class Rule:
         self.renamer = rename
         self.guid = guid
         self.surname = None
+        self.fullpath = False
+
+    def name_prefix(self):
+        if self.surname:
+            return "{}:{}".format(self.guid, self.surname)
+        return self.guid
+
+    @property
+    def only_filename(self):
+        return not self.fullpath
 
     def __eq__(self, other):
         if isinstance(other, Rule):
@@ -28,22 +39,40 @@ class Rule:
         return hash(self.guid)
 
     def match(self, path: str):
+        if self.only_filename:
+            path = os.path.basename(path)
+        else:
+            path = os.path.dirname(path)
         return self.identifier.match(path)
 
-    def format(self, match: re.match):
-        return self.renamer.format(None, *match.groups(), **match.groupdict())
+    def format(self, path: str, match: re.match):
+        new_path = self.renamer.format(None, *match.groups(), **match.groupdict())
+        if self.only_filename:
+            root = os.path.dirname(path)
+            new_path = os.path.join(root, new_path)
+        return new_path
 
     @property
     def as_dict(self):
         return {"guid": self.guid, "id": self.identifier.pattern,
-                "ft": self.renamer, "snm": self.surname}
+                "ft": self.renamer, "snm": self.surname,
+                "fullpath": self.fullpath}
 
     def inline(self) -> str:
-        text = "{}: '{}' ==> '{}'".format(self.guid,
-                                     self.identifier.pattern,
-                                     self.renamer)
+        text = "{}: '{}' ==> '{}'".format(
+            self.guid,
+            self.identifier.pattern,
+            self.renamer)
         if self.surname:
             text += " [" + self.surname + "]"
+        return text
+
+    def info_inline(self) -> str:
+        text = self.inline()
+        if self.only_filename:
+            text += " # name only"
+        else:
+            text += " # full path"
         return text
 
 
@@ -56,9 +85,15 @@ class Rules:
         # list of Rule
         self.rules = {}
 
-    def add(self, id_rule: str, rename_rule: str, guid=None, surname: str=None) -> bool:
+    def add(self, id_rule: str,
+            rename_rule: str,
+            guid=None,
+            surname: str=None,
+            match_fullpath: bool=False) -> bool:
+
         rule = Rule(re.compile(id_rule), rename_rule)
         rule.surname = surname
+        rule.fullpath = match_fullpath
         rule.guid = guid
         logger.debug("Add rule {}".format(rule.inline()))
 
@@ -97,10 +132,10 @@ class Rules:
         for rule in items:
             match = rule.match(path)
             if match:
-                yield (rule, match)
+                yield (rule, path, match)
 
     @property
-    def as_plain_text(self):
+    def as_plain(self):
         for rule in self.rules.values():
             yield rule.as_dict
 

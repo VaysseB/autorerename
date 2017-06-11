@@ -19,7 +19,7 @@ def save_rules(path: str, rules: engine.Rules):
     logger.info("Saving rules to %s", path)
     with open(path, "wb") as output:
         writer = pickle.Pickler(output, pickle.DEFAULT_PROTOCOL)
-        writer.dump({"version": 1, "rules": tuple(rules.as_plain_text)})
+        writer.dump({"version": 1, "rules": tuple(rules.as_plain)})
     logger.info("Rules saved.")
 
 
@@ -57,7 +57,8 @@ def load_rules(path: str) -> engine.Rules:
             rules.add(id_rule=thing["id"],
                       rename_rule=thing["ft"],
                       guid=thing["guid"],
-                      surname=thing["snm"])
+                      surname=thing["snm"],
+                      match_fullpath=thing["fullpath"])
 
         logger.info("Loaded %d rules", len(rules))
 
