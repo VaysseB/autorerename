@@ -14,14 +14,29 @@ EXIT_ERROR = 1
 class App:
     def __init__(self):
         self.rules = None
-        self.path = None
+        self.rule_path = None
+        self.training = None
+        self.training_path = None
 
     def load_rules(self, filepath: str):
-        self.path = filepath
+        self.rule_path = filepath
         self.rules = well.load_rules(filepath)
 
     def save_rules(self):
-        well.save_rules(self.path, self.rules)
+        if self.rule_path:
+            well.save_rules(self.rule_path, self.rules)
+        else:
+            logger.warn("no path of database to save rules")
+
+    def load_training(self, filepath: str):
+        self.training_path = filepath
+        self.training = well.load_training(filepath)
+
+    def save_training(self):
+        if self.training_path:
+            well.save_training(self.training_path, self.training)
+        else:
+            logger.warn("no path of database to save training dataset")
 
 
 class Commands:
@@ -132,31 +147,54 @@ class FolderCommands(Commands):
             print("Files: {}".format(files_counter))
 
 
+class TrainingCommands(Commands):
+    def __init__(self, config: conf.Conf):
+        self.config = config
+
+
+    def create(self, args):
+        logger.info("training new entry set")
+
+        app = App()
+        app.load_training(self.config.trpath)
+        for dataset_name in args.names:
+            app.training.create(dataset_name)
+        app.save_training()
+
+
+
 class Args:
     def __init__(self):
         self.config = None
+
 
     def main(self):
         parser = argparse.ArgumentParser(
             description="File identification and rename action."
         )
         self._add_conf(parser, depth=1)
-        subparsers = parser.add_subparsers(
+        subparser = parser.add_subparsers(
             title="mode",
             dest="mode",
             help="Mode to use")
-        self.install_scan_path(subparsers)
-        self.install_test_rules(subparsers)
-        self.install_manual_test(subparsers)
-        rule_parser = self.install_rules(subparsers)
+        self.install_scan_path(subparser)
+        self.install_test_rules(subparser)
+        self.install_manual_test(subparser)
+        train_parser = self.install_training(subparser)
+        rule_parser = self.install_rules(subparser)
 
         args = parser.parse_args()
         self.resolve(args,
                      parser.print_help,
-                     rule_parser.print_help)
+                     rule_parser.print_help,
+                     train_parser.print_help)
 
 
-    def resolve(self, args, mode_help, rule_help):
+    def resolve(self, args,
+                mode_help,
+                rule_help,
+                train_help):
+
         self._found_conf(args)
         if args.cfpath:
             self.config = conf.load_conf(args.cfpath)
@@ -165,6 +203,7 @@ class Args:
 
         rc = RuleCommands(self.config)
         fc = FolderCommands(self.config)
+        tc = TrainingCommands(self.config)
 
         action = {
             "_key": "mode",
@@ -178,6 +217,11 @@ class Args:
                 "add": rc.add,
                 "list": rc.list,
                 "remove": rc.remove
+            },
+            "train": {
+                "_key": "action",
+                "_help": train_help,
+                "create": tc.create
             }
         }
 
@@ -362,6 +406,35 @@ class Args:
         parser.add_argument("rule_id",
                             help="unique id of the rule")
         return parser
+
+
+    def install_training(self, subparser):
+        parser = subparser.add_parser(
+            "train",
+            help="Manage training dataset."
+        )
+        self._add_conf(parser, depth=2)
+
+        subsubparser = parser.add_subparsers(
+            title="action",
+            dest="action",
+            help="Action to do")
+        self.install_create_training_dataset(subsubparser)
+        return parser
+
+
+    def install_create_training_dataset(self, subparser):
+        parser = subparser.add_parser(
+            "create",
+            help="Create a training dataset."
+        )
+        self._add_conf(parser, depth=3)
+        parser.add_argument("names",
+                            help="training dataset name",
+                            metavar="name",
+                            nargs="+")
+        return parser
+
 
 
 if __name__ == "__main__":

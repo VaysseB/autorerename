@@ -146,3 +146,20 @@ class Rules:
     def find_rule_for(self, path: str):
         return first_map(lambda r: r.match(path),
                          self.rules.values())
+
+
+class Training:
+    def __init__(self):
+        self.material = {}
+
+    def create(self, name: str) -> bool:
+        logger.info("create training dataset {}".format(name))
+        if name in self.material:
+            logger.debug("training dataset {} already exists".format(name))
+            return False
+        self.material[name] = []
+        return True
+
+    def __len__(self):
+        return len(self.material)
+

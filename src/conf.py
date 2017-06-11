@@ -18,6 +18,7 @@ class Conf:
     def __init__(self):
         self.path = None
         self.dbpath = None
+        self.trpath = None
 
 
 def abspath_from_conf(cfpath:str, path: str):
@@ -42,9 +43,14 @@ def load_conf(cfpath: str):
     with open(cfpath, "r") as input_:
         config.read_file(input_)
 
-    dbpath = config["DEFAULT"].get("database")
+    # take content from file
+    dbpath = config["DEFAULT"].get("rules_db")
     if dbpath:
         conf.dbpath = abspath_from_conf(cfpath, dbpath)
+
+    trpath = config["DEFAULT"].get("training_db")
+    if trpath:
+        conf.trpath = abspath_from_conf(cfpath, trpath)
 
     return conf
 
