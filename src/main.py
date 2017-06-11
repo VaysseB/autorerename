@@ -24,9 +24,21 @@ class App:
         well.save_rules(self.path, self.rules)
 
 
-class RuleCommands:
+class Commands:
+    def apply(self, rules: engine.Rules, entry: str, rule_id_or_name: str=None) -> int:
+        counter = 0
+        for (rule, entry, match) in rules.find_applying(entry, rule_id_or_name):
+            counter += 1
+            text = rule.name_prefix()
+            result = rule.format(entry, match)
+            print("{}: '{}' --> '{}'".format(text, entry, result))
+        return counter
+
+
+class RuleCommands(Commands):
     def __init__(self, config: conf.Conf):
         self.config = config
+
 
     def add(self, args):
         logger.info("action: add a rule")
@@ -69,15 +81,12 @@ class RuleCommands:
         app.load_rules(args.dbpath)
 
         counter = 0
-        for (rule, entry, match) in app.rules.find_applying(args.entry, args.rule):
-            counter += 1
-            text = rule.name_prefix()
-            print(text + ": " + rule.format(entry, match))
-
-        logger.info("Found and tested on {} rules".format(counter))
+        for entry in args.entries:
+            count = self.apply(app.rules, entry, args.rule)
+            logger.info("Found and tested on {} rules".format(count))
 
 
-class FolderCommands:
+class FolderCommands(Commands):
     def __init__(self, config: conf.Conf):
         self.config = config
 
@@ -87,22 +96,17 @@ class FolderCommands:
         app = App()
         app.load_rules(args.dbpath)
 
-        counter = 0
+        total = 0
         files_counter = 0
         for entry in scan_fs(args.paths, max_depth=args.max_depth,
                              recursive=args.recursive):
-            prev_counter = counter
-
-            for (rule, entry, match) in app.rules.find_applying(entry, args.rule):
-                counter += 1
-                text = rule.name_prefix()
-                print(text + ": " + entry + " --> " + rule.format(entry, match))
-
-            if prev_counter != counter:
+            count = self.apply(app.rules, entry, args.rule)
+            total += count
+            if count > 0:
                 files_counter += 1
 
-        logger.info("Scan and tested on {} files, {} matches"
-                    .format(files_counter, counter))
+        logger.info("Scan and tested on {} files, with {} renames"
+                    .format(files_counter, total))
         if files_counter > 0:
             print("Files: {}".format(files_counter))
 
@@ -253,8 +257,10 @@ class Args:
         parser.add_argument("--rule",
                             help="id or surname of a rule",
                             metavar="r")
-        parser.add_argument("entry",
-                            help="entry to test")
+        parser.add_argument("entries",
+                            help="entry to test",
+                            metavar="entry",
+                            nargs="+")
         return parser
 
 
