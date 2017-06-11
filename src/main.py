@@ -155,7 +155,7 @@ class Args:
             "_help": mode_help,
             "scan": fc.scan,
             "test": rc.test,
-            "rule": {
+            "rules": {
                 "_key": "action",
                 "_help": rule_help,
                 "add": rc.add,
@@ -272,7 +272,7 @@ class Args:
 
     def install_rules(self, subparser):
         parser = subparser.add_parser(
-            "rule",
+            "rules",
             help="Manage rules."
         )
         self._add_conf(parser, depth=2)
