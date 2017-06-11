@@ -23,10 +23,94 @@ class App:
         well.save_rules(self.path, self.rules)
 
 
+class RuleCommands:
+    def add(self, args):
+        logger.info("action: add a rule")
+
+        app = App()
+        app.load_rules(args.database)
+
+        app.rules.add(id_rule=args.id_rule,
+                      rename_rule=args.rename_rule,
+                      surname=args.surname)
+        app.save_rules()
+
+
+    def list(self, args):
+        logger.info("action: list rules")
+
+        app = App()
+        app.load_rules(args.database)
+
+        print("Count: {}".format(len(app.rules)))
+        for rule in app.rules:
+            print("Rule {}".format(rule.inline()))
+
+
+    def remove(self, args):
+        logger.info("action: remove rule")
+
+        app = App()
+        app.load_rules(args.database)
+
+        if not app.rules.remove(args.rule_id):
+            return EXIT_ERROR
+        app.save_rules()
+
+
+    def test(self, args):
+        logger.info("action: test")
+
+        app = App()
+        app.load_rules(args.database)
+
+        counter = 0
+        for (rule, match) in app.rules.find_applying(args.entry, args.rule):
+            counter += 1
+            if rule.surname:
+                print("{}:{}: {}".format(rule.guid,
+                                         rule.surname,
+                                         rule.format(match)))
+            else:
+                print("{}: {}".format(rule.guid,
+                                      rule.format(match)))
+
+        logger.info("Found and tested on {} rules".format(counter))
+
+
+class FolderCommands:
+    def scan(self, args):
+        logger.info("action: scan")
+
+        app = App()
+        app.load_rules(args.database)
+
+        counter = 0
+        files_counter = 0
+        for entry in scan_fs(args.paths, max_depth=args.max_depth,
+                             recursive=args.recursive):
+            prev_counter = counter
+
+            for (rule, match) in app.rules.find_applying(entry, args.rule):
+                counter += 1
+                if rule.surname:
+                    print("{}:{}: {}".format(rule.guid, rule.surname,
+                                             rule.format(match)))
+                else:
+                    print("{}: {}".format(rule.guid, rule.format(match)))
+
+            if prev_counter != counter:
+                files_counter += 1
+
+        logger.info("Scan and tested on {} files, {} matches"
+                    .format(files_counter, counter))
+        if files_counter > 0:
+            print("Files: {}".format(files_counter))
+
+
+
 class Args:
     def __init__(self, name=None, args=None):
-        self.app = App()
-
         import sys
         self.prog_name = (argparse.ArgumentParser().prog
                           if name is None
@@ -70,31 +154,8 @@ class Args:
         parser.add_argument("paths", help="file or folder", metavar="path",
                             nargs="*")
         args = parser.parse_args(self.args[1:])
-
-        logger.info("action: scan")
-        self.app.load_rules(args.database)
-        counter = 0
-        files_counter = 0
         args.paths = args.paths if args.paths else (".",)
-        for entry in scan_fs(args.paths, max_depth=args.max_depth,
-                             recursive=args.recursive):
-            prev_counter = counter
-
-            for (rule, match) in self.app.rules.find_applying(entry, args.rule):
-                counter += 1
-                if rule.surname:
-                    print("{}:{}: {}".format(rule.guid, rule.surname,
-                                             rule.format(match)))
-                else:
-                    print("{}: {}".format(rule.guid, rule.format(match)))
-
-            if prev_counter != counter:
-                files_counter += 1
-
-        logger.info("Scan and tested on {} files, {} matches"
-                    .format(files_counter, counter))
-        print("Files: {}".format(files_counter))
-        print("Count: {}".format(counter))
+        FolderCommands().scan(args)
 
 
     def test_rules(self):
@@ -107,21 +168,7 @@ class Args:
         parser.add_argument("--rule", help="id or surname of a rule")
         parser.add_argument("entry", help="entry to test")
         args = parser.parse_args(self.args[1:])
-
-        logger.info("action: test")
-        self.app.load_rules(args.database)
-        counter = 0
-        for (rule, match) in self.app.rules.find_applying(args.entry,
-                                                          args.rule):
-            counter += 1
-            if rule.surname:
-                print("{}:{}: {}".format(rule.guid, rule.surname,
-                                         rule.format(match)))
-            else:
-                print("{}: {}".format(rule.guid, rule.format(match)))
-
-        logger.info("Found and tested on {} rules".format(counter))
-        print("Count: {}".format(counter))
+        RuleCommands().test(args)
 
 
     def rules(self):
@@ -157,13 +204,7 @@ class Args:
                             nargs="?",
                             help="surname of the rule")
         args = parser.parse_args(self.args[2:])
-
-        logger.info("action: add a rule")
-        self.app.load_rules(args.database)
-        self.app.rules.add(id_rule=args.id_rule,
-                           rename_rule=args.rename_rule,
-                           surname=args.surname)
-        self.app.save_rules()
+        RuleCommands().add(args)
 
 
     def rules_list(self):
@@ -174,12 +215,7 @@ class Args:
         parser.add_argument("--database", help="database to store rule",
                             metavar="path")
         args = parser.parse_args(self.args[2:])
-
-        logger.info("action: list rules")
-        self.app.load_rules(args.database)
-        print("Count: {}".format(len(self.app.rules)))
-        for rule in self.app.rules:
-            print("Rule {}".format(rule.inline()))
+        RuleCommands().list(args)
 
 
     def rules_remove(self):
@@ -191,12 +227,7 @@ class Args:
         parser.add_argument("--database", help="database to store rule",
                             metavar="path")
         args = parser.parse_args(self.args[2:])
-
-        logger.info("action: remove rule")
-        self.app.load_rules(args.database)
-        if not self.app.rules.remove(args.rule_id):
-            return EXIT_ERROR
-        self.app.save_rules()
+        RuleCommands().remove(args)
 
 
 if __name__ == "__main__":
