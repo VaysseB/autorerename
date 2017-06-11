@@ -28,7 +28,7 @@ class RuleCommands:
         logger.info("action: add a rule")
 
         app = App()
-        app.load_rules(args.database)
+        app.load_rules(args.dbpath)
 
         app.rules.add(id_rule=args.id_rule,
                       rename_rule=args.rename_rule,
@@ -40,9 +40,8 @@ class RuleCommands:
         logger.info("action: list rules")
 
         app = App()
-        app.load_rules(args.database)
+        app.load_rules(args.dbpath)
 
-        print("Count: {}".format(len(app.rules)))
         for rule in app.rules:
             print("Rule {}".format(rule.inline()))
 
@@ -51,7 +50,7 @@ class RuleCommands:
         logger.info("action: remove rule")
 
         app = App()
-        app.load_rules(args.database)
+        app.load_rules(args.dbpath)
 
         if not app.rules.remove(args.rule_id):
             return EXIT_ERROR
@@ -62,7 +61,7 @@ class RuleCommands:
         logger.info("action: test")
 
         app = App()
-        app.load_rules(args.database)
+        app.load_rules(args.dbpath)
 
         counter = 0
         for (rule, match) in app.rules.find_applying(args.entry, args.rule):
@@ -83,7 +82,7 @@ class FolderCommands:
         logger.info("action: scan")
 
         app = App()
-        app.load_rules(args.database)
+        app.load_rules(args.dbpath)
 
         counter = 0
         files_counter = 0
@@ -109,91 +108,139 @@ class FolderCommands:
 
 
 class Args:
-    def __init__(self, name=None, args=None):
-        import sys
-        self.prog_name = (argparse.ArgumentParser().prog
-                          if name is None
-                          else name)
-        self.args = list((sys.argv[1:] if args is None else args)[:])
-        logger.info("cmd args: %s", " ".join(self.args))
-
-
     def main(self):
-        modes = {
-            "rule": self.rules,
-            "test": self.test_rules,
-            "scan": self.scan_path
+        parser = argparse.ArgumentParser(
+            description="File identification and rename action."
+        )
+        subparsers = parser.add_subparsers(
+            title="mode",
+            dest="mode",
+            help="Mode to use")
+        self.install_scan_path(subparsers)
+        self.install_test_rules(subparsers)
+        rule_parser = self.install_rules(subparsers)
+
+        args = parser.parse_args()
+        self.resolve(args,
+                     parser.print_help,
+                     rule_parser.print_help)
+
+
+    def resolve(self, args, mode_help, rule_help):
+        rc = RuleCommands()
+        fc = FolderCommands()
+
+        action = {
+            "_key": "mode",
+            "_help": mode_help,
+            "scan": fc.scan,
+            "test": rc.test,
+            "rule": {
+                "_key": "action",
+                "_help": rule_help,
+                "add": rc.add,
+                "list": rc.list,
+                "remove": rc.remove
+            }
         }
 
-        parser = argparse.ArgumentParser(
-            description="File identification and rename action.",
-            prog=self.prog_name
+        while not callable(action) and action is not None:
+            key = action["_key"]
+            help = lambda _, f=action["_help"]: f()
+            next = getattr(args, key)
+            action = action.get(next, help)
+
+        #
+        self._found_db(args)
+        action(args)
+
+
+    def _add_db(self, parser, depth: int):
+        """
+        Insert the database parse option into the give parser.
+        """
+        parser.add_argument("--database",
+                            help="database of rules",
+                            metavar="path",
+                            dest="dbpath" + str(depth))
+
+
+    def _found_db(self, args):
+        """
+        Find the first `dbpathX` and store it in `dbpath`.
+        """
+        path = None
+        depth = 1
+        key = "dbpath" + str(depth)
+        while path is None and hasattr(args, key):
+            path = getattr(args, key)
+            depth += 1
+            key = "dbpath" + str(depth)
+        args.dbpath = path
+
+
+    def install_scan_path(self, subparser):
+        parser = subparser.add_parser(
+            "scan",
+            help="Scan path for rule application."
         )
-        parser.add_argument("mode", choices=modes.keys(),
-                            help="Mode to use")
-        args = parser.parse_args(self.args[0:1])
-
-        self.prog_name += " " + args.mode
-        return modes[args.mode]()
-
-
-    def scan_path(self):
-        parser = argparse.ArgumentParser(
-            description="Scan path for rule application.",
-            prog=self.prog_name
-        )
-        parser.add_argument("--database", help="database to store rule",
-                            metavar="path")
-        parser.add_argument("--max-depth", type=int, default=-1,
+        self._add_db(parser, depth=1)
+        parser.add_argument("--max-depth",
+                            type=int,
+                            default=-1,
                             help="maximum depth to scan",
                             metavar="d")
-        parser.add_argument("-r", "--recursive", action="store_true",
+        parser.add_argument("-r", "--recursive",
+                            action="store_true",
                             help="scan recursively")
-        parser.add_argument("--rule", help="id or surname of a rule")
-        parser.add_argument("paths", help="file or folder", metavar="path",
-                            nargs="*", default=(".",))
-        args = parser.parse_args(self.args[1:])
-        FolderCommands().scan(args)
+        parser.add_argument("--rule",
+                            help="id or surname of a rule",
+                            metavar="r")
+        parser.add_argument("paths",
+                            help="file or folder",
+                            metavar="path",
+                            nargs="*",
+                            default=(".",))
+        return parser
 
 
-    def test_rules(self):
-        parser = argparse.ArgumentParser(
-            description="Find and test rules application.",
-            prog=self.prog_name
+    def install_test_rules(self, subparser):
+        parser = subparser.add_parser(
+            "test",
+            help="Find and test rules application."
         )
-        parser.add_argument("--database", help="database to store rule",
-                            metavar="path")
-        parser.add_argument("--rule", help="id or surname of a rule")
-        parser.add_argument("entry", help="entry to test")
-        args = parser.parse_args(self.args[1:])
-        RuleCommands().test(args)
+        self._add_db(parser, depth=1)
+        parser.add_argument("--rule",
+                            help="id or surname of a rule",
+                            metavar="r")
+        parser.add_argument("entry",
+                            help="entry to test")
+        return parser
 
 
-    def rules(self):
-        actions = {
-            "add": self.rules_add,
-            "list": self.rules_list,
-            "remove": self.rules_remove
-        }
-
-        parser = argparse.ArgumentParser(
-            description="Manage rules.",
-            prog=self.prog_name
+    def install_rules(self, subparser):
+        parser = subparser.add_parser(
+            "rule",
+            help="Manage rules."
         )
-        parser.add_argument("action", choices=actions.keys())
-        args = parser.parse_args(self.args[1:2])
+        self._add_db(parser, depth=1)
 
-        self.prog_name += " " + args.action
-        return actions[args.action]()
+        subsubparser = parser.add_subparsers(
+            title="action",
+            dest="action",
+            help="Action to do")
+        self.install_add_rule(subsubparser)
+        self.install_list_rules(subsubparser)
+        self.install_remove_rule(subsubparser)
+        return parser
 
 
-    def rules_add(self):
-        parser = argparse.ArgumentParser(
-            description="Add a rule.",
-            prog=self.prog_name
+    def install_add_rule(self, subparser):
+        parser = subparser.add_parser(
+            "add",
+            help="Add a rule."
         )
-        parser.add_argument("--database", help="database to store rule",
-                            metavar="path")
+        self._add_db(parser, depth=2)
         parser.add_argument("id_rule",
                             help="regular expression to identify filename")
         parser.add_argument("rename_rule",
@@ -201,31 +248,27 @@ class Args:
         parser.add_argument("surname",
                             nargs="?",
                             help="surname of the rule")
-        args = parser.parse_args(self.args[2:])
-        RuleCommands().add(args)
+        return parser
 
 
-    def rules_list(self):
-        parser = argparse.ArgumentParser(
-            description="List rules.",
-            prog=self.prog_name
+    def install_list_rules(self, subparser):
+        parser = subparser.add_parser(
+            "list",
+            help="List rules."
         )
-        parser.add_argument("--database", help="database to store rule",
-                            metavar="path")
-        args = parser.parse_args(self.args[2:])
-        RuleCommands().list(args)
+        self._add_db(parser, depth=2)
+        return parser
 
 
-    def rules_remove(self):
-        parser = argparse.ArgumentParser(
-            description="Remove a rule.",
-            prog=self.prog_name
+    def install_remove_rule(self, subparser):
+        parser = subparser.add_parser(
+            "remove",
+            help="Remove a rule."
         )
-        parser.add_argument("rule_id", help="unique id of the rule")
-        parser.add_argument("--database", help="database to store rule",
-                            metavar="path")
-        args = parser.parse_args(self.args[2:])
-        RuleCommands().remove(args)
+        self._add_db(parser, depth=2)
+        parser.add_argument("rule_id",
+                            help="unique id of the rule")
+        return parser
 
 
 if __name__ == "__main__":
