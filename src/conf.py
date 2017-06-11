@@ -29,14 +29,14 @@ def abspath_from_conf(cfpath:str, path: str):
 
 
 def load_conf(cfpath: str):
+    logger.info("load config file {}".format(cfpath))
+    if not cfpath:
+        return Conf()
+
     cfpath = os.path.abspath(cfpath)
 
     conf = Conf()
     conf.path = cfpath
-
-    logger.info("load config file {}".format(cfpath))
-    if not cfpath:
-        return conf
 
     config = configparser.ConfigParser()
     with open(cfpath, "r") as input_:

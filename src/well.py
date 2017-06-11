@@ -31,7 +31,9 @@ def load_rules(path: str) -> engine.Rules:
 
     logger.info("Loading rules from %s", path)
 
-    if not os.path.exists(path):
+    if path is None:
+        return rules
+    elif not os.path.exists(path):
         logger.info("database path doesn't exists {}".format(path))
         return rules
     # special cases for pickle if input is empty
