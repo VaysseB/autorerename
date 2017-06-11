@@ -99,11 +99,10 @@ class FolderCommands:
 
             for (rule, match) in app.rules.find_applying(entry, args.rule):
                 counter += 1
-                if rule.surname:
-                    print("{}:{}: {}".format(rule.guid, rule.surname,
-                                             rule.format(match)))
-                else:
-                    print("{}: {}".format(rule.guid, rule.format(match)))
+                header = rule.guid + ":" + (
+                    (rule.surname + ":") if rule.surname else "")
+                new_path = rule.format(match)
+                print(header, entry, " --> ", new_path)
 
             if prev_counter != counter:
                 files_counter += 1
