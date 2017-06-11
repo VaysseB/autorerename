@@ -4,14 +4,24 @@ import os.path
 
 import logger
 
+
 def first_map(func: callable, items: iter):
     """
-    Return the first result that `bool() == True`.
+    Return the first result that `bool(func(elem)) is True`.
     """
     for item in items:
         res = func(item)
-        if res:
+        if bool(res) is True:
             return res
+
+
+def first_that(func: callable, items: iter):
+    """
+    Return the first element that `bool(func(elem)) is True`.
+    """
+    for item in items:
+        if bool(func(item)) is True:
+            return item
 
 
 def scan_fs(paths, max_depth: int, recursive: bool) -> str:

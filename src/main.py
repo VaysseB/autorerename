@@ -4,6 +4,7 @@ import argparse
 import logger
 import engine
 import well
+import conf
 from utils import *
 
 
@@ -24,6 +25,9 @@ class App:
 
 
 class RuleCommands:
+    def __init__(self, config: conf.Conf):
+        self.config = config
+
     def add(self, args):
         logger.info("action: add a rule")
 
@@ -78,6 +82,9 @@ class RuleCommands:
 
 
 class FolderCommands:
+    def __init__(self, config: conf.Conf):
+        self.config = config
+
     def scan(self, args):
         logger.info("action: scan")
 
@@ -108,6 +115,9 @@ class FolderCommands:
 
 
 class Args:
+    def __init__(self):
+        self.config = None
+
     def main(self):
         parser = argparse.ArgumentParser(
             description="File identification and rename action."
@@ -127,8 +137,11 @@ class Args:
 
 
     def resolve(self, args, mode_help, rule_help):
-        rc = RuleCommands()
-        fc = FolderCommands()
+        # TODO if we can specify the config file in arguments, loads it here
+        self.config = conf.default_conf()
+
+        rc = RuleCommands(self.config)
+        fc = FolderCommands(self.config)
 
         action = {
             "_key": "mode",
@@ -177,6 +190,10 @@ class Args:
             depth += 1
             key = "dbpath" + str(depth)
         args.dbpath = path
+
+        # if database not given, get them from configuration file
+        if path is None:
+            args.dbpath = self.config.dbpath
 
 
     def install_scan_path(self, subparser):

@@ -100,5 +100,7 @@ ENV/
 # mypy
 .mypy_cache/
 
-#
+####
+# project specific
 private/
+/autorerename.conf.ini
