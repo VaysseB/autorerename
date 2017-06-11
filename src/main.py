@@ -115,6 +115,7 @@ class Args:
         parser = argparse.ArgumentParser(
             description="File identification and rename action."
         )
+        self._add_conf(parser, depth=1)
         subparsers = parser.add_subparsers(
             title="mode",
             dest="mode",
@@ -130,8 +131,11 @@ class Args:
 
 
     def resolve(self, args, mode_help, rule_help):
-        # TODO if we can specify the config file in arguments, loads it here
-        self.config = conf.default_conf()
+        self._found_conf(args)
+        if args.cfpath:
+            self.config = conf.load_conf(args.cfpath)
+        else:
+            self.config = conf.default_conf()
 
         rc = RuleCommands(self.config)
         fc = FolderCommands(self.config)
@@ -159,6 +163,30 @@ class Args:
         #
         self._found_db(args)
         action(args)
+
+
+    def _add_conf(self, parser, depth: int):
+        """
+        Insert the configuration file parse option into the give parser.
+        """
+        parser.add_argument("-f", "--config",
+                            help="configuration file",
+                            metavar="path",
+                            dest="cfpath" + str(depth))
+
+
+    def _found_conf(self, args):
+        """
+        Find the first `cfpathX` and store it in `cfpath`.
+        """
+        path = None
+        depth = 1
+        key = "cfpath" + str(depth)
+        while path is None and hasattr(args, key):
+            path = getattr(args, key)
+            depth += 1
+            key = "cfpath" + str(depth)
+        args.cfpath = path
 
 
     def _add_db(self, parser, depth: int):
@@ -194,6 +222,7 @@ class Args:
             "scan",
             help="Scan path for rule application."
         )
+        self._add_conf(parser, depth=2)
         self._add_db(parser, depth=1)
         parser.add_argument("--max-depth",
                             type=int,
@@ -219,6 +248,7 @@ class Args:
             "test",
             help="Find and test rules application."
         )
+        self._add_conf(parser, depth=2)
         self._add_db(parser, depth=1)
         parser.add_argument("--rule",
                             help="id or surname of a rule",
@@ -233,6 +263,7 @@ class Args:
             "rule",
             help="Manage rules."
         )
+        self._add_conf(parser, depth=2)
         self._add_db(parser, depth=1)
 
         subsubparser = parser.add_subparsers(
@@ -250,6 +281,7 @@ class Args:
             "add",
             help="Add a rule."
         )
+        self._add_conf(parser, depth=3)
         self._add_db(parser, depth=2)
         parser.add_argument("id_rule",
                             help="regular expression to identify filename")
@@ -270,6 +302,7 @@ class Args:
             "list",
             help="List rules."
         )
+        self._add_conf(parser, depth=3)
         self._add_db(parser, depth=2)
         return parser
 
@@ -279,6 +312,7 @@ class Args:
             "remove",
             help="Remove a rule."
         )
+        self._add_conf(parser, depth=3)
         self._add_db(parser, depth=2)
         parser.add_argument("rule_id",
                             help="unique id of the rule")
