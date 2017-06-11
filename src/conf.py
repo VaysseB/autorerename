@@ -11,7 +11,7 @@ confs = (
     "~/.local/share/autorerename/config.ini",
     "~/.config/autorerename/config.ini"
 )
-conf = tuple(os.path.realpath(os.path.expanduser(p)) for p in confs)
+confs = tuple(os.path.realpath(os.path.expanduser(p)) for p in confs)
 
 
 class Conf:
