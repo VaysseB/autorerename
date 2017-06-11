@@ -170,9 +170,12 @@ class TrainingCommands(Commands):
         app = App()
         app.load_training(self.config.trpath)
 
-        ds = iter(app.training)
+        ds = None
         if args.names:
-            ds = filter(lambda n: n in args.names, ds)
+            ds = filter(lambda x: x != (),
+                        (app.training.get(n) for n in args.names))
+        else:
+            ds = iter(app.training)
 
         for (name, data) in ds:
             print("Dataset", name)

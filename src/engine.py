@@ -173,6 +173,13 @@ class Training:
         dataset.extend(list(data))
         return True
 
+    def get(self, name: str) -> tuple:
+        dataset = self.material.get(name, None)
+        if dataset is None:
+            logger.warn("no such training dataset {}".format(name))
+            return ()
+        return (name, dataset)
+
     def drop(self, name: str) -> bool:
         logger.info("drop training dataset {}".format(name))
         dataset = self.material.pop(name, None)
