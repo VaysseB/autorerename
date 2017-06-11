@@ -205,11 +205,13 @@ class TrainingCommands(Commands):
         app = App()
         app.load_training(self.config.trpath)
 
-
         for (name, data) in self.select_trds(app.training, args.names):
-            print("Dataset", name)
-            for d in data:
-                print(" '", d, "'", sep="")
+            if args.short:
+                print("Dataset", name, " count:" + str(len(data)))
+            else:
+                print("Dataset", name)
+                for d in data:
+                    print(" '", d, "'", sep="")
 
 
     def insert(self, args):
@@ -528,6 +530,9 @@ class Args:
             help="List training datasets."
         )
         self._add_conf(parser, depth=3)
+        parser.add_argument("--short",
+                            help="display only names with counter",
+                            action="store_true")
         parser.add_argument("names",
                             help="training dataset name to select",
                             metavar="name",
