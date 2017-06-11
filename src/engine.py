@@ -93,7 +93,7 @@ class Rules:
         rule.surname = surname
         rule.fullpath = match_fullpath
         rule.guid = guid
-        logger.debug("Add rule {}".format(rule.guid))
+        logger.info("add rule {}".format(rule.guid))
 
         if guid is None:
             while guid is None or guid in self.rules:
@@ -103,23 +103,23 @@ class Rules:
                 m.update(datetime.datetime.today().isoformat().encode("utf8"))
                 guid = m.hexdigest()[:12]
             rule.guid = guid
-            logger.debug("create id '{}' for rule".format(guid))
+            logger.info("create id '{}' for rule".format(guid))
         elif guid in self.rules:
-            logger.debug("already existing rule {}".format(guid))
+            logger.warn("already existing rule {}".format(guid))
             return
 
         self.rules[rule.guid] = rule
         return rule
 
     def remove(self, guid) -> bool:
-        logger.debug("Remove rule {}".format(guid))
+        logger.info("remove rule {}".format(guid))
         rule = self.rules.pop(guid, None)
 
         if rule is None:
-            logger.debug("No such rule {}".format(guid))
+            logger.warn("no such rule {}".format(guid))
             return False
 
-        logger.debug("Found rule {}".format(guid))
+        logger.info("found rule {}".format(guid))
         return True
 
     def find_applying(self, path: str, surname_or_id: str=None) -> ((Rule, re.match)):
@@ -171,6 +171,14 @@ class Training:
                 logger.warn("no training dataset {}".format(name))
                 return False
         dataset.extend(list(data))
+        return True
+
+    def drop(self, name: str) -> bool:
+        logger.info("drop training dataset {}".format(name))
+        dataset = self.material.pop(name, None)
+        if dataset is None:
+            logger.warn("no such training dataset {}".format(name))
+            return False
         return True
 
     def __len__(self):

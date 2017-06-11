@@ -155,7 +155,7 @@ class TrainingCommands(Commands):
 
 
     def create(self, args):
-        logger.info("training new entry set")
+        logger.info("training create dataset")
 
         app = App()
         app.load_training(self.config.trpath)
@@ -179,12 +179,23 @@ class TrainingCommands(Commands):
             for d in data:
                 print(" '", d, "'", sep="")
 
+
     def insert(self, args):
         logger.info("training insert into dataset")
 
         app = App()
         app.load_training(self.config.trpath)
         app.training.insert(args.name, args.entries, args.creation)
+        app.save_training()
+
+
+    def drop(self, args):
+        logger.info("training remove dataset")
+
+        app = App()
+        app.load_training(self.config.trpath)
+        for dataset_name in args.names:
+            app.training.drop(dataset_name)
         app.save_training()
 
 
@@ -248,7 +259,8 @@ class Args:
                 "_help": train_help,
                 "create": tc.create,
                 "list": tc.list,
-                "insert": tc.insert
+                "insert": tc.insert,
+                "drop": tc.drop
             }
         }
 
@@ -449,6 +461,7 @@ class Args:
         self.install_create_training_dataset(subsubparser)
         self.install_list_training_dataset(subsubparser)
         self.install_insert_into_training_dataset(subsubparser)
+        self.install_drop_training_dataset(subsubparser)
         return parser
 
 
@@ -477,6 +490,7 @@ class Args:
                             nargs="*")
         return parser
 
+
     def install_insert_into_training_dataset(self, subparser):
         parser = subparser.add_parser(
             "insert",
@@ -493,6 +507,19 @@ class Args:
                             help="create dataset if doesn't exist",
                             action="store_true",
                             dest="creation")
+        return parser
+
+
+    def install_drop_training_dataset(self, subparser):
+        parser = subparser.add_parser(
+            "drop",
+            help="Drop training datasets."
+        )
+        self._add_conf(parser, depth=3)
+        parser.add_argument("names",
+                            help="training dataset name to drop",
+                            metavar="name",
+                            nargs="*")
         return parser
 
 
