@@ -110,6 +110,7 @@ class RuleCommands(Commands):
             count = self.apply(app.rules, entry, args.rule)
             logger.info("Found and tested on {} rules".format(count))
 
+
     def manual_test(self, args):
         logger.info("action: manual test")
 
@@ -125,6 +126,7 @@ class RuleCommands(Commands):
 class FolderCommands(Commands):
     def __init__(self, config: conf.Conf):
         self.config = config
+
 
     def scan(self, args):
         logger.info("action: scan")
@@ -161,6 +163,21 @@ class TrainingCommands(Commands):
             app.training.create(dataset_name)
         app.save_training()
 
+
+    def list(self, args):
+        logger.info("training list of dataset")
+
+        app = App()
+        app.load_training(self.config.trpath)
+
+        ds = iter(app.training)
+        if args.names:
+            ds = filter(lambda n: n in args.names, ds)
+
+        for (name, data) in ds:
+            print("Dataset", name)
+            for d in data:
+                print(" ", d)
 
 
 class Args:
@@ -221,7 +238,8 @@ class Args:
             "train": {
                 "_key": "action",
                 "_help": train_help,
-                "create": tc.create
+                "create": tc.create,
+                "list": tc.list
             }
         }
 
@@ -420,6 +438,7 @@ class Args:
             dest="action",
             help="Action to do")
         self.install_create_training_dataset(subsubparser)
+        self.install_list_training_dataset(subsubparser)
         return parser
 
 
@@ -433,6 +452,19 @@ class Args:
                             help="training dataset name",
                             metavar="name",
                             nargs="+")
+        return parser
+
+
+    def install_list_training_dataset(self, subparser):
+        parser = subparser.add_parser(
+            "list",
+            help="List training datasets."
+        )
+        self._add_conf(parser, depth=3)
+        parser.add_argument("names",
+                            help="training dataset name to select",
+                            metavar="name",
+                            nargs="*")
         return parser
 
 

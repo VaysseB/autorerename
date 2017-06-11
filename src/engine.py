@@ -163,3 +163,6 @@ class Training:
     def __len__(self):
         return len(self.material)
 
+    def __iter__(self):
+        return iter(self.material.items())
+
