@@ -60,12 +60,6 @@ class Rule:
             new_path = os.path.join(root, new_path)
         return new_path
 
-    @property
-    def as_dict(self):
-        return {"guid": self.guid, "id": self.identifier.pattern,
-                "ft": self.renamer, "snm": self.name,
-                "fullpath": self.fullpath}
-
     def inline(self) -> str:
         text = "{}: '{}' ==> '{}'".format(
             self.guid,
