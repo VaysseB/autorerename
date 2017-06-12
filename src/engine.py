@@ -83,12 +83,14 @@ class Rules:
             name: str=None,
             match_fullpath: bool=False) -> bool:
 
+        # create the rule
         rule = Rule(re.compile(id_rule), rename_rule)
         rule.name = name
         rule.fullpath = match_fullpath
         rule.guid = guid
         logger.info("add rule {}".format(rule.guid))
 
+        # create guid if this is a new rule
         if guid is None:
             while guid is None or guid in self.rules:
                 m = hashlib.sha1()
@@ -105,13 +107,18 @@ class Rules:
         self.rules[rule.guid] = rule
         return rule
 
-    def remove(self, guid) -> bool:
-        logger.info("remove rule {}".format(guid))
+    def remove(self, guid=None, name=None) -> bool:
+        logger.info("remove rule {} or {}".format(guid, name))
         rule = self.rules.pop(guid, None)
 
         if rule is None:
-            logger.warn("no such rule {}".format(guid))
-            return False
+            rule = self._find_name(name)
+            if rule:
+                self.rules.pop(rule.guid, None)
+                guid = rule.guid
+            else:
+                logger.warn("no such rule {}".format(guid))
+                return False
 
         logger.info("found rule {}".format(guid))
         return True
@@ -135,4 +142,7 @@ class Rules:
     def find_rule_for(self, path: str):
         return first_map(lambda r: r.match(path),
                          self.rules.values())
+
+    def _find_name(self, name: str) -> Rule:
+        return first_that(lambda r: r.name == name, self.rules.values())
 

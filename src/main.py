@@ -102,14 +102,18 @@ class RuleCommands(Commands):
         """
         Remove a rule from the database.
         """
-        logger.info("action: remove rule")
+        logger.info("action: remove rule(s)")
 
         app = App()
         app.load_rules(args.dbpath)
 
-        if not app.rules.remove(args.rule_id):
-            return EXIT_ERROR
+        success = True
+        for rule_lkup in args.rules_lkup:
+            success &= app.rules.remove(guid=rule_lkup, name=rule_lkup)
         app.save_rules()
+
+        if not success:
+            return EXIT_ERROR
 
     def manual_test(self, args):
         """
@@ -144,13 +148,13 @@ class FolderCommands(Commands):
         app.load_rules(args.dbpath)
 
         for entry in args.entries:
-            self.simulate(app.rules, entry, args.rule)
+            self.simulate(app.rules, entry, args.rule_lkup)
 
         for entry in scan_fs(args.dir_paths, recursive=False):
-            self.simulate(app.rules, entry, args.rule)
+            self.simulate(app.rules, entry, args.rule_lkup)
 
         for entry in scan_fs(args.recur_paths, recursive=True):
-            self.simulate(app.rules, entry, args.rule)
+            self.simulate(app.rules, entry, args.rule_lkup)
 
 
 class Args:
@@ -258,12 +262,23 @@ class Args:
                             metavar="path",
                             dest="dbpath" + str(depth))
 
-    def _insert_rule_lookup(self, parser):
-        return parser.add_argument(
-            "--rule",
-            help="id or name of a rule",
-            metavar="r",
-            dest="rule")
+    def _insert_rule_lookup(self, parser,
+                            optional: bool=True,
+                            multiple: bool=False):
+        if optional:
+            return parser.add_argument(
+                "--rule",
+                help="id or name of a rule",
+                metavar="r",
+                dest="rule_lkup",
+                action=("append" if multiple else "store"))
+        else:
+            return parser.add_argument(
+                "rules_lkup",
+                help="id or name of a rule",
+                metavar="rule",
+                nargs=("+" if multiple else 1),
+                action=("append" if multiple else "store"))
 
     def _collapse_arg(self, args, prefix: str):
         """
@@ -374,8 +389,7 @@ class Args:
         )
         self._add_conf_argument(parser, depth=3)
         self._add_db_argument(parser, depth=2)
-        parser.add_argument("rule_id",
-                            help="unique id of the rule")
+        self._insert_rule_lookup(parser, optional=False)
         return parser
 
 

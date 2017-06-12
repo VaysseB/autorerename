@@ -11,7 +11,7 @@ def first_map(func: callable, items: iter):
     """
     for item in items:
         res = func(item)
-        if bool(res) is True:
+        if res:
             return res
 
 
@@ -20,7 +20,7 @@ def first_that(func: callable, items: iter):
     Return the first element that `bool(func(elem)) is True`.
     """
     for item in items:
-        if bool(func(item)) is True:
+        if func(item):
             return item
 
 
