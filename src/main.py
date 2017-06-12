@@ -244,7 +244,7 @@ class Args:
         """
         Insert the configuration file parse option into the give parser.
         """
-        parser.add_argument("-f", "--config",
+        parser.add_argument("-f", "--file",
                             help="configuration file",
                             metavar="path",
                             dest="cfpath" + str(depth))
