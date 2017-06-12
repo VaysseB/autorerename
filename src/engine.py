@@ -132,11 +132,6 @@ class Rules:
             if match:
                 yield (rule, path, match)
 
-    @property
-    def as_plain(self):
-        for rule in self.rules.values():
-            yield rule.as_dict
-
     def __len__(self):
         return len(self.rules)
 

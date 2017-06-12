@@ -12,6 +12,26 @@ import logger
 import engine
 
 
+def serialize_rule(rule: engine.Rule) -> dict:
+    return {
+        "guid": rule.guid,
+        "id": rule.identifier_as_text,
+        "rn": rule.renamer_as_text,
+        "name": rule.name,
+        "fullpath": rule.fullpath
+    }
+
+
+def deserialize_rule(rules: engine.Rules, data: dict) -> engine.Rule:
+    return rules.add(
+        id_rule=data["id"],
+        rename_rule=data["rn"],
+        guid=data["guid"],
+        name=data["name"],
+        match_fullpath=data["fullpath"]
+    )
+
+
 def save_rules(path: str, rules: engine.Rules):
     """
     Save rules to file.
@@ -19,7 +39,10 @@ def save_rules(path: str, rules: engine.Rules):
     logger.info("Saving rules to %s", path)
     with open(path, "wb") as output:
         writer = pickle.Pickler(output, pickle.DEFAULT_PROTOCOL)
-        writer.dump({"version": 1, "rules": tuple(rules.as_plain)})
+        writer.dump({
+            "version": 1,
+            "rules": tuple(serialize_rule(r) for r in rules)
+        })
     logger.info("Rules saved.")
 
 
@@ -55,12 +78,8 @@ def load_rules(path: str) -> engine.Rules:
             raise RuntimeError("cannot load data from version {}"
                                .format(version))
 
-        for thing in data.get("rules", ()):
-            rules.add(id_rule=thing["id"],
-                      rename_rule=thing["ft"],
-                      guid=thing["guid"],
-                      name=thing["snm"],
-                      match_fullpath=thing["fullpath"])
+        for data in data.get("rules", ()):
+            deserialize_rule(rules, data)
 
         logger.info("Loaded %d rules", len(rules))
 
