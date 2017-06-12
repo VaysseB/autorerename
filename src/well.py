@@ -59,7 +59,7 @@ def load_rules(path: str) -> engine.Rules:
             rules.add(id_rule=thing["id"],
                       rename_rule=thing["ft"],
                       guid=thing["guid"],
-                      surname=thing["snm"],
+                      name=thing["snm"],
                       match_fullpath=thing["fullpath"])
 
         logger.info("Loaded %d rules", len(rules))

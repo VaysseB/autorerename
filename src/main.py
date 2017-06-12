@@ -65,7 +65,7 @@ class RuleCommands(Commands):
         rule = rules.add(
             id_rule=args.id_rule,
             rename_rule=args.rename_rule,
-            surname=getattr(args, "surname", None),
+            name=getattr(args, "name", None),
             match_fullpath=getattr(args, "fullpath", False))
         return rule
 
@@ -91,7 +91,7 @@ class RuleCommands(Commands):
 
         for rule in app.rules:
             print("Rule", rule.guid,
-                  ((" as " + rule.surname) if rule.surname else ""))
+                  ((" as " + rule.name) if rule.name else ""))
             print("  from '" + rule.identifier_as_text + "'")
             print("    to '" + rule.renamer_as_text + "'")
             print("  options:", ("name only"
@@ -261,7 +261,7 @@ class Args:
     def _insert_rule_lookup(self, parser):
         return parser.add_argument(
             "--rule",
-            help="id or surname of a rule",
+            help="id or name of a rule",
             metavar="r",
             dest="rule")
 
@@ -349,9 +349,9 @@ class Args:
                             help="regular expression to identify filename")
         parser.add_argument("rename_rule",
                             help="format rule to rename filename")
-        parser.add_argument("surname",
-                            nargs="?",
-                            help="surname of the rule")
+        parser.add_argument("name",
+                            help="name of the rule (optional)",
+                            nargs="?")
         parser.add_argument("--fullpath",
                             help=("match full path of file "
                             "instead of file name only"),

@@ -18,12 +18,12 @@ class Rule:
         self.identifier = re.compile(identify)
         self.renamer = rename
         self.guid = guid
-        self.surname = None
+        self.name = None
         self.fullpath = False
 
     def name_prefix(self):
-        if self.surname:
-            return "{}:{}".format(self.guid, self.surname)
+        if self.name:
+            return "{}:{}".format(self.guid, self.name)
         return self.guid
 
     @property
@@ -63,7 +63,7 @@ class Rule:
     @property
     def as_dict(self):
         return {"guid": self.guid, "id": self.identifier.pattern,
-                "ft": self.renamer, "snm": self.surname,
+                "ft": self.renamer, "snm": self.name,
                 "fullpath": self.fullpath}
 
     def inline(self) -> str:
@@ -86,11 +86,11 @@ class Rules:
     def add(self, id_rule: str,
             rename_rule: str,
             guid=None,
-            surname: str=None,
+            name: str=None,
             match_fullpath: bool=False) -> bool:
 
         rule = Rule(re.compile(id_rule), rename_rule)
-        rule.surname = surname
+        rule.name = name
         rule.fullpath = match_fullpath
         rule.guid = guid
         logger.info("add rule {}".format(rule.guid))
@@ -122,10 +122,10 @@ class Rules:
         logger.info("found rule {}".format(guid))
         return True
 
-    def find_applying(self, path: str, surname_or_id: str=None) -> ((Rule, re.match)):
+    def find_applying(self, path: str, name_or_id: str=None) -> ((Rule, re.match)):
         items = iter(self.rules.values())
-        if surname_or_id:
-            items = filter(lambda r: surname_or_id in (r.surname, r.guid), items)
+        if name_or_id:
+            items = filter(lambda r: name_or_id in (r.name, r.guid), items)
 
         for rule in items:
             match = rule.match(path)
