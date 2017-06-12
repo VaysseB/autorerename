@@ -36,7 +36,10 @@ class Commands:
     Common functions to all commands.
     """
 
-    def apply(self, rules: engine.Rules, entry: str, rule_id_or_name: str=None) -> int:
+    def simulate(self,
+                 rules: engine.Rules,
+                 entry: str,
+                 rule_id_or_name: str=None) -> int:
         counter = 0
         for (rule, entry, match) in rules.find_applying(entry, rule_id_or_name):
             counter += 1
@@ -108,19 +111,6 @@ class RuleCommands(Commands):
             return EXIT_ERROR
         app.save_rules()
 
-    def test(self, args):
-        """
-        Find known rules applying from handmade entries and simulate the output.
-        """
-        logger.info("action: test")
-
-        app = App()
-        app.load_rules(args.dbpath)
-
-        for entry in args.entries:
-            count = self.apply(app.rules, entry, args.rule)
-            logger.info("Found and tested {} times".format(count))
-
     def manual_test(self, args):
         """
         Create a temporary rule and try handmade entries on it.
@@ -131,7 +121,7 @@ class RuleCommands(Commands):
         rule = self._add_rule(rules, args)
 
         for entry in args.entries:
-            count = self.apply(rules, entry)
+            count = self.simulate(rules, entry)
             logger.info("Tested {} -> {} on {} rules".format(
                 rule.identifier_as_text, rule.renamer_as_text, count))
 
@@ -144,29 +134,23 @@ class FolderCommands(Commands):
     def __init__(self, config: conf.Conf):
         self.config = config
 
-    def scan(self, args):
+    def test(self, args):
         """
-        Scan path in fs and try to apply known rules on it.
+        Find known rules applying from handmade entries and simulate the output.
         """
-        logger.info("action: scan")
+        logger.info("action: test")
 
         app = App()
         app.load_rules(args.dbpath)
 
-        total = 0
-        files_counter = 0
-        for entry in scan_fs(args.paths, max_depth=args.max_depth,
-                             recursive=args.recursive):
-            count = self.apply(app.rules, entry, args.rule)
-            total += count
-            if count > 0:
-                files_counter += 1
+        for entry in args.entries:
+            self.simulate(app.rules, entry, args.rule)
 
-        #
-        logger.info("Scan and tested on {} files, with {} renames"
-                    .format(files_counter, total))
-        if files_counter > 0:
-            print("Files: {}".format(files_counter))
+        for entry in scan_fs(args.dir_paths, recursive=False):
+            self.simulate(app.rules, entry, args.rule)
+
+        for entry in scan_fs(args.recur_paths, recursive=True):
+            self.simulate(app.rules, entry, args.rule)
 
 
 class Args:
@@ -189,7 +173,6 @@ class Args:
             title="mode",
             dest="mode",
             help="Mode to use")
-        self.install_scan_path(subparser)
         self.install_test_rules(subparser)
         self.install_manual_test(subparser)
         rule_parser = self.install_rules(subparser)
@@ -236,8 +219,7 @@ class Args:
         action = {
             "_key": "mode",
             "_help": mode_help,
-            "scan": fc.scan,
-            "test": rc.test,
+            "test": fc.test,
             "manual-test": rc.manual_test,
             "rules": {
                 "_key": "action",
@@ -276,6 +258,13 @@ class Args:
                             metavar="path",
                             dest="dbpath" + str(depth))
 
+    def _insert_rule_lookup(self, parser):
+        return parser.add_argument(
+            "--rule",
+            help="id or surname of a rule",
+            metavar="r",
+            dest="rule")
+
     def _collapse_arg(self, args, prefix: str):
         """
         Find in args the first "<prefix><number>" and save into <prefix> the
@@ -290,45 +279,31 @@ class Args:
             key = prefix + str(depth)
         setattr(args, prefix, value)
 
-    def install_scan_path(self, subparser):
-        parser = subparser.add_parser(
-            "scan",
-            help="Scan path for rule application."
-        )
-        self._add_conf_argument(parser, depth=2)
-        self._add_db_argument(parser, depth=1)
-        parser.add_argument("--max-depth",
-                            type=int,
-                            default=-1,
-                            help="maximum depth to scan",
-                            metavar="d")
-        parser.add_argument("-r", "--recursive",
-                            action="store_true",
-                            help="scan recursively")
-        parser.add_argument("--rule",
-                            help="id or surname of a rule",
-                            metavar="r")
-        parser.add_argument("paths",
-                            help="file or folder",
-                            metavar="path",
-                            nargs="*",
-                            default=(".",))
-        return parser
-
     def install_test_rules(self, subparser):
         parser = subparser.add_parser(
             "test",
-            help="Find and test rules application."
+            help="Testing of rules and their application."
         )
         self._add_conf_argument(parser, depth=2)
         self._add_db_argument(parser, depth=1)
-        parser.add_argument("--rule",
-                            help="id or surname of a rule",
-                            metavar="r")
+        self._insert_rule_lookup(parser)
         parser.add_argument("entries",
-                            help="entry to test",
-                            metavar="entry",
-                            nargs="*")
+                            help="manual entries to test",
+                            metavar="text",
+                            nargs="*",
+                            default=[])
+        parser.add_argument("-s", "--scan",
+                            help="test on files from given path, not recursive",
+                            metavar="path",
+                            action="append",
+                            dest="dir_paths",
+                            default=[])
+        parser.add_argument("-r", "--recursive",
+                            help="test on files from given path, recursive",
+                            metavar="path",
+                            action="append",
+                            dest="recur_paths",
+                            default=[])
         return parser
 
     def install_manual_test(self, subparser):

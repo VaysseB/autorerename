@@ -24,7 +24,7 @@ def first_that(func: callable, items: iter):
             return item
 
 
-def scan_fs(paths, max_depth: int, recursive: bool) -> str:
+def scan_fs(paths, max_depth: int=-1, recursive: bool=False) -> str:
     if not recursive:
         max_depth = 0
 
