@@ -15,8 +15,6 @@ class App:
     def __init__(self):
         self.rules = None
         self.rule_path = None
-        self.training = None
-        self.training_path = None
 
     def load_rules(self, filepath: str):
         self.rule_path = filepath
@@ -28,16 +26,6 @@ class App:
         else:
             logger.warn("no path of database to save rules")
 
-    def load_training(self, filepath: str):
-        self.training_path = filepath
-        self.training = well.load_training(filepath)
-
-    def save_training(self):
-        if self.training_path:
-            well.save_training(self.training_path, self.training)
-        else:
-            logger.warn("no path of database to save training dataset")
-
 
 class Commands:
     def apply(self, rules: engine.Rules, entry: str, rule_id_or_name: str=None) -> int:
@@ -48,14 +36,6 @@ class Commands:
             result = rule.format(entry, match)
             print("{}: '{}' --> '{}'".format(text, entry, result))
         return counter
-
-    def select_trds(self, training: engine.Training, names: tuple=()) -> tuple:
-        if names:
-            return filter(lambda x: x != (),
-                          (training.get(n) for n in names))
-        else:
-            return iter(training)
-
 
 
 class RuleCommands(Commands):
@@ -114,16 +94,6 @@ class RuleCommands(Commands):
         app = App()
         app.load_rules(args.dbpath)
 
-        if args.trnames:
-            app.load_training(self.config.trpath)
-
-            for (trname, tr_dataset) in self.select_trds(app.training, args.trnames):
-                for entry in tr_dataset:
-                    count = self.apply(app.rules, entry, args.rule)
-                    logger.info("Found and tested on {} times from {}"
-                                .format(count, trname))
-
-        #
         for entry in args.entries:
             count = self.apply(app.rules, entry, args.rule)
             logger.info("Found and tested {} times".format(count))
@@ -151,8 +121,6 @@ class FolderCommands(Commands):
 
         app = App()
         app.load_rules(args.dbpath)
-        if args.save_trds:
-            app.load_training(self.config.trpath)
 
         total = 0
         files_counter = 0
@@ -163,74 +131,11 @@ class FolderCommands(Commands):
             if count > 0:
                 files_counter += 1
 
-                if args.save_trds:
-                    if args.save_fullpath:
-                        text = entry
-                    else:
-                        text = os.path.basename(entry)
-
-                    app.training.insert(args.save_trds,
-                                        (text,),
-                                        create_if=True)
-
-
         #
         logger.info("Scan and tested on {} files, with {} renames"
                     .format(files_counter, total))
         if files_counter > 0:
             print("Files: {}".format(files_counter))
-
-        if args.save_trds:
-            app.save_training()
-
-
-class TrainingCommands(Commands):
-    def __init__(self, config: conf.Conf):
-        self.config = config
-
-
-    def create(self, args):
-        logger.info("training create dataset")
-
-        app = App()
-        app.load_training(self.config.trpath)
-        for dataset_name in args.names:
-            app.training.create(dataset_name)
-        app.save_training()
-
-
-    def list(self, args):
-        logger.info("training list of dataset")
-
-        app = App()
-        app.load_training(self.config.trpath)
-
-        for (name, data) in self.select_trds(app.training, args.names):
-            if args.short:
-                print("Dataset", name, " count:" + str(len(data)))
-            else:
-                print("Dataset", name)
-                for d in data:
-                    print(" '", d, "'", sep="")
-
-
-    def insert(self, args):
-        logger.info("training insert into dataset")
-
-        app = App()
-        app.load_training(self.config.trpath)
-        app.training.insert(args.name, args.entries, args.creation)
-        app.save_training()
-
-
-    def drop(self, args):
-        logger.info("training remove dataset")
-
-        app = App()
-        app.load_training(self.config.trpath)
-        for dataset_name in args.names:
-            app.training.drop(dataset_name)
-        app.save_training()
 
 
 class Args:
@@ -250,20 +155,17 @@ class Args:
         self.install_scan_path(subparser)
         self.install_test_rules(subparser)
         self.install_manual_test(subparser)
-        train_parser = self.install_training(subparser)
         rule_parser = self.install_rules(subparser)
 
         args = parser.parse_args()
         self.resolve(args,
                      parser.print_help,
-                     rule_parser.print_help,
-                     train_parser.print_help)
+                     rule_parser.print_help)
 
 
     def resolve(self, args,
                 mode_help,
-                rule_help,
-                train_help):
+                rule_help):
 
         self._found_conf(args)
         if args.cfpath:
@@ -273,7 +175,6 @@ class Args:
 
         rc = RuleCommands(self.config)
         fc = FolderCommands(self.config)
-        tc = TrainingCommands(self.config)
 
         action = {
             "_key": "mode",
@@ -288,14 +189,6 @@ class Args:
                 "list": rc.list,
                 "remove": rc.remove
             },
-            "train": {
-                "_key": "action",
-                "_help": train_help,
-                "create": tc.create,
-                "list": tc.list,
-                "insert": tc.insert,
-                "drop": tc.drop
-            }
         }
 
         while not callable(action) and action is not None:
@@ -384,13 +277,6 @@ class Args:
                             metavar="path",
                             nargs="*",
                             default=(".",))
-        parser.add_argument("--save-training",
-                            help="save to training dataset",
-                            metavar="name",
-                            dest="save_trds")
-        parser.add_argument("--save-fullpath",
-                            help="save full path to training dataset",
-                            action="store_true")
         return parser
 
 
@@ -404,11 +290,6 @@ class Args:
         parser.add_argument("--rule",
                             help="id or surname of a rule",
                             metavar="r")
-        parser.add_argument("--train",
-                            help="training dataset name",
-                            metavar="name",
-                            dest="trnames",
-                            action="append")
         parser.add_argument("entries",
                             help="entry to test",
                             metavar="entry",
@@ -490,85 +371,6 @@ class Args:
         self._add_db(parser, depth=2)
         parser.add_argument("rule_id",
                             help="unique id of the rule")
-        return parser
-
-
-    def install_training(self, subparser):
-        parser = subparser.add_parser(
-            "train",
-            help="Manage training dataset."
-        )
-        self._add_conf(parser, depth=2)
-
-        subsubparser = parser.add_subparsers(
-            title="action",
-            dest="action",
-            help="Action to do")
-        self.install_create_training_dataset(subsubparser)
-        self.install_list_training_dataset(subsubparser)
-        self.install_insert_into_training_dataset(subsubparser)
-        self.install_drop_training_dataset(subsubparser)
-        return parser
-
-
-    def install_create_training_dataset(self, subparser):
-        parser = subparser.add_parser(
-            "create",
-            help="Create a training dataset."
-        )
-        self._add_conf(parser, depth=3)
-        parser.add_argument("names",
-                            help="training dataset name",
-                            metavar="name",
-                            nargs="+")
-        return parser
-
-
-    def install_list_training_dataset(self, subparser):
-        parser = subparser.add_parser(
-            "list",
-            help="List training datasets."
-        )
-        self._add_conf(parser, depth=3)
-        parser.add_argument("--short",
-                            help="display only names with counter",
-                            action="store_true")
-        parser.add_argument("names",
-                            help="training dataset name to select",
-                            metavar="name",
-                            nargs="*")
-        return parser
-
-
-    def install_insert_into_training_dataset(self, subparser):
-        parser = subparser.add_parser(
-            "insert",
-            help="Insert data into training dataset."
-        )
-        self._add_conf(parser, depth=3)
-        parser.add_argument("name",
-                            help="training dataset name")
-        parser.add_argument("entries",
-                            help="training entry",
-                            nargs="*",
-                            metavar="entry")
-        parser.add_argument("--create",
-                            help="create dataset if doesn't exist",
-                            action="store_true",
-                            dest="creation")
-        return parser
-
-
-    def install_drop_training_dataset(self, subparser):
-        parser = subparser.add_parser(
-            "drop",
-            help="Drop training datasets."
-        )
-        self._add_conf(parser, depth=3)
-        parser.add_argument("names",
-                            help="training dataset name to drop",
-                            metavar="name",
-                            nargs="*")
         return parser
 
 

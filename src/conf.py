@@ -48,10 +48,6 @@ def load_conf(cfpath: str):
     if dbpath:
         conf.dbpath = abspath_from_conf(cfpath, dbpath)
 
-    trpath = config["DEFAULT"].get("training_db")
-    if trpath:
-        conf.trpath = abspath_from_conf(cfpath, trpath)
-
     return conf
 
 
