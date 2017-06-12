@@ -12,6 +12,10 @@ EXIT_ERROR = 1
 
 
 class App:
+    """
+    Bundle of resources to of the application.
+    """
+
     def __init__(self):
         self.rules = None
         self.rule_path = None
@@ -28,6 +32,10 @@ class App:
 
 
 class Commands:
+    """
+    Common functions to all commands.
+    """
+
     def apply(self, rules: engine.Rules, entry: str, rule_id_or_name: str=None) -> int:
         counter = 0
         for (rule, entry, match) in rules.find_applying(entry, rule_id_or_name):
@@ -39,11 +47,18 @@ class Commands:
 
 
 class RuleCommands(Commands):
+    """
+    Commands CRUD on rules and test.
+    """
+
     def __init__(self, config: conf.Conf):
         self.config = config
 
-
     def _add_rule(self, rules: engine.Rules, args):
+        """
+        Add a rule from data in args.
+        Shorthand version.
+        """
         rule = rules.add(
             id_rule=args.id_rule,
             rename_rule=args.rename_rule,
@@ -51,8 +66,10 @@ class RuleCommands(Commands):
             match_fullpath=getattr(args, "fullpath", False))
         return rule
 
-
     def add(self, args):
+        """
+        Add a rule in the database.
+        """
         logger.info("action: add a rule")
 
         app = App()
@@ -60,8 +77,10 @@ class RuleCommands(Commands):
         self._add_rule(app.rules, args)
         app.save_rules()
 
-
     def list(self, args):
+        """
+        List rules from the database.
+        """
         logger.info("action: list rules")
 
         app = App()
@@ -76,8 +95,10 @@ class RuleCommands(Commands):
                                    if rule.only_filename
                                    else "full path"))
 
-
     def remove(self, args):
+        """
+        Remove a rule from the database.
+        """
         logger.info("action: remove rule")
 
         app = App()
@@ -87,8 +108,10 @@ class RuleCommands(Commands):
             return EXIT_ERROR
         app.save_rules()
 
-
     def test(self, args):
+        """
+        Find known rules applying from handmade entries and simulate the output.
+        """
         logger.info("action: test")
 
         app = App()
@@ -98,8 +121,10 @@ class RuleCommands(Commands):
             count = self.apply(app.rules, entry, args.rule)
             logger.info("Found and tested {} times".format(count))
 
-
     def manual_test(self, args):
+        """
+        Create a temporary rule and try handmade entries on it.
+        """
         logger.info("action: manual test")
 
         rules = engine.Rules()
@@ -112,11 +137,17 @@ class RuleCommands(Commands):
 
 
 class FolderCommands(Commands):
+    """
+    Commands applying on path.
+    """
+
     def __init__(self, config: conf.Conf):
         self.config = config
 
-
     def scan(self, args):
+        """
+        Scan path in fs and try to apply known rules on it.
+        """
         logger.info("action: scan")
 
         app = App()
@@ -139,15 +170,21 @@ class FolderCommands(Commands):
 
 
 class Args:
-    def __init__(self):
-        self.config = None
-
+    """
+    Command line argument parser and action performer.
+    """
 
     def main(self):
+        """
+        Entry point to parse command lines arguments, and
+        dispatch to the right action.
+        """
+
+        # build command line argument parser
         parser = argparse.ArgumentParser(
             description="File identification and rename action."
         )
-        self._add_conf(parser, depth=1)
+        self._add_conf_argument(parser, depth=1)
         subparser = parser.add_subparsers(
             title="mode",
             dest="mode",
@@ -157,25 +194,45 @@ class Args:
         self.install_manual_test(subparser)
         rule_parser = self.install_rules(subparser)
 
+        # identify what action to do and execute it
         args = parser.parse_args()
+        self.load_conf(args)
+        self.find_dbpath(args)
         self.resolve(args,
                      parser.print_help,
                      rule_parser.print_help)
 
-
-    def resolve(self, args,
-                mode_help,
-                rule_help):
-
-        self._found_conf(args)
+    def load_conf(self, args):
+        """
+        Load the configuration file from standard paths or in arguments.
+        """
+        self._collapse_arg(args, "cfpath")
         if args.cfpath:
             self.config = conf.load_conf(args.cfpath)
         else:
             self.config = conf.default_conf()
 
+    def find_dbpath(self, args):
+        """
+        Find database path from configuration file or cmd line argument.
+        """
+        self._collapse_arg(args, "dbpath")
+        if args.dbpath is None:
+            args.dbpath = self.config.dbpath
+
+    def resolve(self, args,
+                mode_help,
+                rule_help):
+        """
+        Find what action to and execute it.
+        """
+        # specify all commands possible
         rc = RuleCommands(self.config)
         fc = FolderCommands(self.config)
 
+        # actions reachable from cmd line args
+        # special "_key" : key to find the value in args to find the next action
+        # special "_help": help to use in case of unknown value
         action = {
             "_key": "mode",
             "_help": mode_help,
@@ -191,18 +248,17 @@ class Args:
             },
         }
 
+        # resolve command to apply
         while not callable(action) and action is not None:
             key = action["_key"]
             help = lambda _, f=action["_help"]: f()
             next = getattr(args, key)
             action = action.get(next, help)
 
-        #
-        self._found_db(args)
+        # do action
         action(args)
 
-
-    def _add_conf(self, parser, depth: int):
+    def _add_conf_argument(self, parser, depth: int):
         """
         Insert the configuration file parse option into the give parser.
         """
@@ -211,22 +267,7 @@ class Args:
                             metavar="path",
                             dest="cfpath" + str(depth))
 
-
-    def _found_conf(self, args):
-        """
-        Find the first `cfpathX` and store it in `cfpath`.
-        """
-        path = None
-        depth = 1
-        key = "cfpath" + str(depth)
-        while path is None and hasattr(args, key):
-            path = getattr(args, key)
-            depth += 1
-            key = "cfpath" + str(depth)
-        args.cfpath = path
-
-
-    def _add_db(self, parser, depth: int):
+    def _add_db_argument(self, parser, depth: int):
         """
         Insert the database parse option into the give parser.
         """
@@ -235,32 +276,27 @@ class Args:
                             metavar="path",
                             dest="dbpath" + str(depth))
 
-
-    def _found_db(self, args):
+    def _collapse_arg(self, args, prefix: str):
         """
-        Find the first `dbpathX` and store it in `dbpath`.
+        Find in args the first "<prefix><number>" and save into <prefix> the
+        first found.
         """
-        path = None
+        value = None
         depth = 1
-        key = "dbpath" + str(depth)
-        while path is None and hasattr(args, key):
-            path = getattr(args, key)
+        key = prefix + str(depth)
+        while value is None and hasattr(args, key):
+            value = getattr(args, key)
             depth += 1
-            key = "dbpath" + str(depth)
-        args.dbpath = path
-
-        # if database not given, get them from configuration file
-        if path is None:
-            args.dbpath = self.config.dbpath
-
+            key = prefix + str(depth)
+        setattr(args, prefix, value)
 
     def install_scan_path(self, subparser):
         parser = subparser.add_parser(
             "scan",
             help="Scan path for rule application."
         )
-        self._add_conf(parser, depth=2)
-        self._add_db(parser, depth=1)
+        self._add_conf_argument(parser, depth=2)
+        self._add_db_argument(parser, depth=1)
         parser.add_argument("--max-depth",
                             type=int,
                             default=-1,
@@ -279,14 +315,13 @@ class Args:
                             default=(".",))
         return parser
 
-
     def install_test_rules(self, subparser):
         parser = subparser.add_parser(
             "test",
             help="Find and test rules application."
         )
-        self._add_conf(parser, depth=2)
-        self._add_db(parser, depth=1)
+        self._add_conf_argument(parser, depth=2)
+        self._add_db_argument(parser, depth=1)
         parser.add_argument("--rule",
                             help="id or surname of a rule",
                             metavar="r")
@@ -295,7 +330,6 @@ class Args:
                             metavar="entry",
                             nargs="*")
         return parser
-
 
     def install_manual_test(self, subparser):
         parser = subparser.add_parser(
@@ -312,14 +346,13 @@ class Args:
                             nargs="*")
         return parser
 
-
     def install_rules(self, subparser):
         parser = subparser.add_parser(
             "rules",
             help="Manage rules."
         )
-        self._add_conf(parser, depth=2)
-        self._add_db(parser, depth=1)
+        self._add_conf_argument(parser, depth=2)
+        self._add_db_argument(parser, depth=1)
 
         subsubparser = parser.add_subparsers(
             title="action",
@@ -330,14 +363,13 @@ class Args:
         self.install_remove_rule(subsubparser)
         return parser
 
-
     def install_add_rule(self, subparser):
         parser = subparser.add_parser(
             "add",
             help="Add a rule."
         )
-        self._add_conf(parser, depth=3)
-        self._add_db(parser, depth=2)
+        self._add_conf_argument(parser, depth=3)
+        self._add_db_argument(parser, depth=2)
         parser.add_argument("id_rule",
                             help="regular expression to identify filename")
         parser.add_argument("rename_rule",
@@ -351,24 +383,22 @@ class Args:
                             action="store_true")
         return parser
 
-
     def install_list_rules(self, subparser):
         parser = subparser.add_parser(
             "list",
             help="List rules."
         )
-        self._add_conf(parser, depth=3)
-        self._add_db(parser, depth=2)
+        self._add_conf_argument(parser, depth=3)
+        self._add_db_argument(parser, depth=2)
         return parser
-
 
     def install_remove_rule(self, subparser):
         parser = subparser.add_parser(
             "remove",
             help="Remove a rule."
         )
-        self._add_conf(parser, depth=3)
-        self._add_db(parser, depth=2)
+        self._add_conf_argument(parser, depth=3)
+        self._add_db_argument(parser, depth=2)
         parser.add_argument("rule_id",
                             help="unique id of the rule")
         return parser
