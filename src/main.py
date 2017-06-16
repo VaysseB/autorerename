@@ -66,8 +66,7 @@ class RuleCommands(Commands):
         rule = rules.add(
             id_rule=args.id_rule,
             rename_rule=args.rename_rule,
-            name=getattr(args, "name", None),
-            match_fullpath=getattr(args, "fullpath", False))
+            name=getattr(args, "name", None))
         return rule
 
     def add(self, args):
@@ -95,9 +94,6 @@ class RuleCommands(Commands):
                   ((" as " + rule.name) if rule.name else ""))
             print("  from '" + rule.identifier_as_text + "'")
             print("    to '" + rule.renamer_as_text + "'")
-            print("  options:", ("name only"
-                                   if rule.only_filename
-                                   else "full path"))
 
     def remove(self, args):
         """
@@ -371,10 +367,6 @@ class Args:
         parser.add_argument("name",
                             help="name of the rule (optional)",
                             nargs="?")
-        parser.add_argument("--fullpath",
-                            help=("match full path of file "
-                            "instead of file name only"),
-                            action="store_true")
         return parser
 
     def install_list_rules(self, subparser):

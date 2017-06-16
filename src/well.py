@@ -17,8 +17,7 @@ def serialize_rule(rule: engine.Rule) -> dict:
         "guid": rule.guid,
         "id": rule.identifier_as_text,
         "rn": rule.renamer_as_text,
-        "name": rule.name,
-        "fullpath": rule.fullpath
+        "name": rule.name
     }
 
 
@@ -27,8 +26,7 @@ def deserialize_rule(rules: engine.Rules, data: dict) -> engine.Rule:
         id_rule=data["id"],
         rename_rule=data["rn"],
         guid=data["guid"],
-        name=data["name"],
-        match_fullpath=data["fullpath"]
+        name=data["name"]
     )
 
 

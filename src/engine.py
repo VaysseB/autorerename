@@ -19,16 +19,11 @@ class Rule:
         self.renamer = rename
         self.guid = guid
         self.name = None
-        self.fullpath = False
 
     def name_prefix(self):
         if self.name:
             return "{}:{}".format(self.guid, self.name)
         return self.guid
-
-    @property
-    def only_filename(self):
-        return not self.fullpath
 
     @property
     def identifier_as_text(self):
@@ -47,16 +42,11 @@ class Rule:
         return hash(self.guid)
 
     def match(self, path: Path):
-        entry = (path.name
-                 if self.only_filename
-                 else str(path))
-        return self.identifier.match(entry)
+        return self.identifier.match(path.name)
 
     def format(self, path: Path, match: re.match):
-        new_path = self.renamer.format(None, *match.groups(), **match.groupdict())
-        if self.only_filename:
-            new_path = path.with_name(new_path)
-        return new_path
+        updated_name = self.renamer.format(None, *match.groups(), **match.groupdict())
+        return path.with_name(updated_name)
 
     def inline(self) -> str:
         text = "{}: '{}' ==> '{}'".format(
@@ -78,13 +68,11 @@ class Rules:
     def add(self, id_rule: str,
             rename_rule: str,
             guid=None,
-            name: str=None,
-            match_fullpath: bool=False) -> bool:
+            name: str=None) -> bool:
 
         # create the rule
         rule = Rule(re.compile(id_rule), rename_rule)
         rule.name = name
-        rule.fullpath = match_fullpath
         rule.guid = guid
         logger.info("add rule {}".format(rule.guid))
 
