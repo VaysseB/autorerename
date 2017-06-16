@@ -34,9 +34,13 @@ class App:
         else:
             logger.warn("no path of database to save rules")
 
+    def open_action_log(self, logpath: Path):
+        self.renamer = action.Renamer(str(logpath.resolve()))
+        self.renamer.start_read()
+
     def start_action(self, logpath: Path):
         self.renamer = action.Renamer(str(logpath.resolve()))
-        self.renamer.start()
+        self.renamer.start_write()
 
     def end_action(self):
         self.renamer.end()
@@ -213,6 +217,19 @@ class FolderCommands(Commands):
             print("Cannot rename '{}' to '{}'".format(entry, new_entry),
                   file=sys.stderr)
 
+    def log(self, args):
+        """
+        Dump the action log.
+        """
+        logger.info("action: log")
+
+        app = App()
+        app.open_action_log(self.config.actlog_path)
+
+        for line in app.renamer.logs():
+            s = "#" if line.success else "!"
+            print("{}: '{}' --> '{}'".format(s, line.from_, line.to))
+
 
 class Args:
     """
@@ -234,8 +251,9 @@ class Args:
             title="mode",
             dest="mode",
             help="Mode to use")
-        self.install_action_rules(subparser)
-        self.install_test_rules(subparser)
+        self.install_action(subparser)
+        self.install_log(subparser)
+        self.install_test(subparser)
         self.install_manual_test(subparser)
         rule_parser = self.install_rules(subparser)
 
@@ -283,6 +301,7 @@ class Args:
             "_key": "mode",
             "_help": mode_help,
             "test": fc.test,
+            "log": fc.log,
             "rename": fc.rename,
             "manual-test": rc.manual_test,
             "rules": {
@@ -354,7 +373,7 @@ class Args:
             key = prefix + str(depth)
         setattr(args, prefix, value)
 
-    def install_action_rules(self, subparser):
+    def install_action(self, subparser):
         parser = subparser.add_parser(
             "rename",
             help="Rename files."
@@ -369,7 +388,15 @@ class Args:
                             default=[])
         return parser
 
-    def install_test_rules(self, subparser):
+    def install_log(self, subparser):
+        parser = subparser.add_parser(
+            "log",
+            help="Print the rename log."
+        )
+        self._add_conf_argument(parser, depth=2)
+        return parser
+
+    def install_test(self, subparser):
         parser = subparser.add_parser(
             "test",
             help="Testing of rules and their application."
