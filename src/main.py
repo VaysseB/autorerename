@@ -121,7 +121,8 @@ class RuleCommands(Commands):
         rules = engine.Rules()
         rule = self._add_rule(rules, args)
 
-        for entry in args.entries:
+        entries = (Path(p) for p in args.entries)
+        for entry in entries:
             count = self.simulate(rules, entry)
             logger.info("Tested {} -> {} on {} rules".format(
                 rule.identifier_as_text, rule.renamer_as_text, count))
