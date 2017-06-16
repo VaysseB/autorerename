@@ -1,4 +1,5 @@
 
+import sys
 import argparse
 from pathlib import Path
 
@@ -6,6 +7,7 @@ import logger
 import engine
 import well
 import conf
+import action
 from utils import *
 
 
@@ -20,6 +22,7 @@ class App:
     def __init__(self):
         self.rules = None
         self.rule_path = None
+        self.renamer = None
 
     def load_rules(self, filepath: Path):
         self.rule_path = filepath
@@ -31,22 +34,40 @@ class App:
         else:
             logger.warn("no path of database to save rules")
 
+    def start_action(self, logpath: Path):
+        self.renamer = action.Renamer(str(logpath.resolve()))
+        self.renamer.start()
+
+    def end_action(self):
+        self.renamer.end()
+        self.renamer = None
+
+    def rename(self, from_: Path, to: Path) -> bool:
+        return self.renamer.rename(from_, to)
+
 
 class Commands:
     """
     Common functions to all commands.
     """
 
+    def _reformat(self,
+                  rules: engine.Rules,
+                  entry: Path,
+                  rule_id_or_name: str=None) -> int:
+        for (rule, entry, match) in rules.find_applying(entry, rule_id_or_name):
+            result = rule.format(entry, match)
+            yield (rule, result)
+
     def simulate(self,
                  rules: engine.Rules,
-                 entry: str,
+                 entry: Path,
                  rule_id_or_name: str=None) -> int:
         counter = 0
-        for (rule, entry, match) in rules.find_applying(entry, rule_id_or_name):
+        for (rule, result) in self._reformat(rules, entry, rule_id_or_name):
             counter += 1
-            text = rule.name_prefix()
-            result = rule.format(entry, match)
-            print("{}: '{}' --> '{}'".format(text, entry, result))
+            print("$:{}: '{}' --> '{}'".format(
+                rule.name_prefix(), entry, result))
         return counter
 
 
@@ -145,7 +166,7 @@ class FolderCommands(Commands):
         app = App()
         app.load_rules(args.dbpath)
 
-        for entry in args.entries:
+        for entry in (Path(p) for p in args.entries):
             self.simulate(app.rules, entry, args.rule_lkup)
 
         dir_paths = (Path(p) for p in args.dir_paths)
@@ -155,6 +176,42 @@ class FolderCommands(Commands):
         recur_paths = (Path(p) for p in args.recur_paths)
         for entry in scan_fs(recur_paths, recursive=True):
             self.simulate(app.rules, entry, args.rule_lkup)
+
+    def rename(self, args):
+        """
+        Apply first found rules applying from handmade entries and simulate the output.
+        """
+        logger.info("action: execution")
+
+        self.app = app = App()
+        app.load_rules(args.dbpath)
+        app.start_action(self.config.actlog_path)
+
+        for entry in (Path(p) for p in args.entries):
+            self._apply_first_rename(app.rules, entry, args.rule_lkup)
+
+        app.end_action()
+
+    def _apply_first_rename(self,
+                           rules: engine.Rules,
+                           entry: Path,
+                           rule_id_or_name: str=None):
+        maybe_result = next(self._reformat(rules, entry, rule_id_or_name), None)
+        if maybe_result:
+            rule, result = maybe_result
+            return self._execute(rule, entry, result)
+
+    def _execute(self,
+                 rule: engine.Rule,
+                 entry: Path,
+                 new_entry: Path):
+        done = self.app.rename(entry, new_entry)
+        status = "#" if done else "!"
+        print("{}:{}: '{}' --> '{}'".format(
+            status, rule.name_prefix(), entry, new_entry))
+        if not done:
+            print("Cannot rename '{}' to '{}'".format(entry, new_entry),
+                  file=sys.stderr)
 
 
 class Args:
@@ -177,6 +234,7 @@ class Args:
             title="mode",
             dest="mode",
             help="Mode to use")
+        self.install_action_rules(subparser)
         self.install_test_rules(subparser)
         self.install_manual_test(subparser)
         rule_parser = self.install_rules(subparser)
@@ -225,6 +283,7 @@ class Args:
             "_key": "mode",
             "_help": mode_help,
             "test": fc.test,
+            "rename": fc.rename,
             "manual-test": rc.manual_test,
             "rules": {
                 "_key": "action",
@@ -294,6 +353,21 @@ class Args:
             depth += 1
             key = prefix + str(depth)
         setattr(args, prefix, value)
+
+    def install_action_rules(self, subparser):
+        parser = subparser.add_parser(
+            "rename",
+            help="Rename files."
+        )
+        self._add_conf_argument(parser, depth=2)
+        self._add_db_argument(parser, depth=1)
+        self._insert_rule_lookup(parser)
+        parser.add_argument("entries",
+                            help="manual entries to rename",
+                            metavar="text",
+                            nargs="*",
+                            default=[])
+        return parser
 
     def install_test_rules(self, subparser):
         parser = subparser.add_parser(

@@ -19,6 +19,7 @@ class Conf:
         self.path = None
         self.dbpath = None
         self.trpath = None
+        self.actlog_path = None
 
 
 def abspath_from_conf(cfpath: Path, path: Path):
@@ -43,6 +44,11 @@ def load_conf(cfpath: Path):
     dbpath = config["DEFAULT"].get("rules_db")
     if dbpath:
         conf.dbpath = abspath_from_conf(cfpath, Path(dbpath))
+
+    # take action log from file
+    action_log_path = config["DEFAULT"].get("action_log")
+    if action_log_path:
+        conf.actlog_path = abspath_from_conf(cfpath, Path(action_log_path))
 
     return conf
 
