@@ -42,18 +42,24 @@ class Rule:
         return hash(self.guid)
 
     def match(self, path: Path):
-        return self.identifier.match(path.name)
+        return self.identifier.search(path.name)
 
     def format(self, path: Path, match: re.match):
-        updated_name = self.renamer.format(None, *match.groups(), **match.groupdict())
-        return path.with_name(updated_name)
+        """
+        Format the path with the result of the matching.
+        Only replace what was captured.
+        """
+        assert match is not None
 
-    def inline(self) -> str:
-        text = "{}: '{}' ==> '{}'".format(
-            self.guid,
-            self.identifier.pattern,
-            self.renamer)
-        return text
+        # get what is before and after the capture
+        prefix = path.name[:match.start()]
+        suffix = path.name[match.end():]
+
+        updated_name = self.renamer.format(None,
+                                           *match.groups(),
+                                           **match.groupdict())
+
+        return path.with_name(prefix + updated_name + suffix)
 
 
 class Rules:
