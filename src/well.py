@@ -5,7 +5,7 @@ Load and Save functionalities.
 It drops and pulls from the well.
 """
 
-import os.path
+from pathlib import Path
 import pickle
 
 import logger
@@ -32,7 +32,7 @@ def deserialize_rule(rules: engine.Rules, data: dict) -> engine.Rule:
     )
 
 
-def save_rules(path: str, rules: engine.Rules):
+def save_rules(path: Path, rules: engine.Rules):
     """
     Save rules to file.
     """
@@ -46,7 +46,7 @@ def save_rules(path: str, rules: engine.Rules):
     logger.info("Rules saved.")
 
 
-def load_rules(path: str) -> engine.Rules:
+def load_rules(path: Path) -> engine.Rules:
     """
     Load rules from file.
     """
@@ -56,11 +56,11 @@ def load_rules(path: str) -> engine.Rules:
 
     if path is None:
         return rules
-    elif not os.path.exists(path):
+    elif not path.exists():
         logger.info("database path doesn't exists {}".format(path))
         return rules
     # special cases for pickle if input is empty
-    elif os.path.getsize(path) <= 0:
+    elif path.stat().st_size <= 0:
         logger.info("empty database")
         return rules
 

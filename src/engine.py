@@ -3,7 +3,7 @@ import re
 import itertools
 import hashlib
 import datetime
-import os.path
+from pathlib import Path
 
 import logger
 from utils import *
@@ -46,18 +46,16 @@ class Rule:
     def __hash__(self):
         return hash(self.guid)
 
-    def match(self, path: str):
-        if self.only_filename:
-            path = os.path.basename(path)
-        else:
-            path = os.path.dirname(path)
-        return self.identifier.match(path)
+    def match(self, path: Path):
+        entry = (path.name
+                 if self.only_filename
+                 else str(path))
+        return self.identifier.match(entry)
 
-    def format(self, path: str, match: re.match):
+    def format(self, path: Path, match: re.match):
         new_path = self.renamer.format(None, *match.groups(), **match.groupdict())
         if self.only_filename:
-            root = os.path.dirname(path)
-            new_path = os.path.join(root, new_path)
+            new_path = path.with_name(new_path)
         return new_path
 
     def inline(self) -> str:
@@ -123,7 +121,7 @@ class Rules:
         logger.info("found rule {}".format(guid))
         return True
 
-    def find_applying(self, path: str, name_or_id: str=None) -> ((Rule, re.match)):
+    def find_applying(self, path: Path, name_or_id: str=None) -> ((Rule, re.match)):
         items = iter(self.rules.values())
         if name_or_id:
             items = filter(lambda r: name_or_id in (r.name, r.guid), items)

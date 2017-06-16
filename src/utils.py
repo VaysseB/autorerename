@@ -1,6 +1,6 @@
 
 import os
-import os.path
+from pathlib import Path
 
 import logger
 
@@ -24,17 +24,16 @@ def first_that(func: callable, items: iter):
             return item
 
 
-def scan_fs(paths, max_depth: int=-1, recursive: bool=False) -> str:
+def scan_fs(paths: (Path,), max_depth: int=-1, recursive: bool=False) -> str:
     if not recursive:
         max_depth = 0
 
-    def scan_folder(root, limit_depth: int) -> str:
+    def scan_folder(root: Path, limit_depth: int) -> str:
         logger.debug("scan in {} (limit depth:{})".format(root, limit_depth))
-        for entry in os.listdir(root):
-            entry = os.path.join(root, entry)
-            if os.path.isdir(entry) and limit_depth != 0:
+        for entry in root.iterdir():
+            if entry.is_dir() and limit_depth != 0:
                 yield from scan_folder(entry, limit_depth-1)
-            elif os.path.isfile(entry):
+            elif entry.is_file():
                 yield entry
 
     for root in paths:

@@ -1,5 +1,6 @@
 
 import argparse
+from pathlib import Path
 
 import logger
 import engine
@@ -20,7 +21,7 @@ class App:
         self.rules = None
         self.rule_path = None
 
-    def load_rules(self, filepath: str):
+    def load_rules(self, filepath: Path):
         self.rule_path = filepath
         self.rules = well.load_rules(filepath)
 
@@ -150,10 +151,12 @@ class FolderCommands(Commands):
         for entry in args.entries:
             self.simulate(app.rules, entry, args.rule_lkup)
 
-        for entry in scan_fs(args.dir_paths, recursive=False):
+        dir_paths = (Path(p) for p in args.dir_paths)
+        for entry in scan_fs(dir_paths, recursive=False):
             self.simulate(app.rules, entry, args.rule_lkup)
 
-        for entry in scan_fs(args.recur_paths, recursive=True):
+        recur_paths = (Path(p) for p in args.recur_paths)
+        for entry in scan_fs(recur_paths, recursive=True):
             self.simulate(app.rules, entry, args.rule_lkup)
 
 
@@ -195,7 +198,7 @@ class Args:
         """
         self._collapse_arg(args, "cfpath")
         if args.cfpath:
-            self.config = conf.load_conf(args.cfpath)
+            self.config = conf.load_conf(Path(args.cfpath).resolve())
         else:
             self.config = conf.default_conf()
 
@@ -206,6 +209,7 @@ class Args:
         self._collapse_arg(args, "dbpath")
         if args.dbpath is None:
             args.dbpath = self.config.dbpath
+        args.dbpath = Path(args.dbpath)
 
     def resolve(self, args,
                 mode_help,

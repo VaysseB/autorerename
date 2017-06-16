@@ -1,5 +1,5 @@
 
-import os.path
+from pathlib import Path
 import configparser
 
 import logger
@@ -11,7 +11,7 @@ confs = (
     "~/.local/share/autorerename/config.ini",
     "~/.config/autorerename/config.ini"
 )
-confs = tuple(os.path.realpath(os.path.expanduser(p)) for p in confs)
+confs = tuple(Path(c).expanduser() for c in confs)
 
 
 class Conf:
@@ -21,20 +21,16 @@ class Conf:
         self.trpath = None
 
 
-def abspath_from_conf(cfpath:str, path: str):
-    root = os.path.dirname(os.path.abspath(cfpath))
-    path = os.path.expanduser(path)
-    if os.path.isabs(path):
-        return path
-    return os.path.join(root, path)
+def abspath_from_conf(cfpath: Path, path: Path):
+    return (path
+            if path.is_absolute()
+            else cfpath.parent.joinpath(path)).resolve()
 
 
-def load_conf(cfpath: str):
+def load_conf(cfpath: Path):
     logger.info("load config file {}".format(cfpath))
     if not cfpath:
         return Conf()
-
-    cfpath = os.path.abspath(cfpath)
 
     conf = Conf()
     conf.path = cfpath
@@ -46,12 +42,12 @@ def load_conf(cfpath: str):
     # take content from file
     dbpath = config["DEFAULT"].get("rules_db")
     if dbpath:
-        conf.dbpath = abspath_from_conf(cfpath, dbpath)
+        conf.dbpath = abspath_from_conf(cfpath, Path(dbpath))
 
     return conf
 
 
 def default_conf():
-    path = first_that(os.path.exists, confs)
+    path = first_that(Path.exists, confs)
     logger.info("default conf at {}".format(path))
     return load_conf(path)
