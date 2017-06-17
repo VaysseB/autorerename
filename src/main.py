@@ -92,7 +92,7 @@ class RuleCommands(Commands):
         logger.info("action: add a rule")
 
         app = App()
-        app.load_rules(args.dbpath)
+        app.load_rules(args.rule_db_path)
         self._add_rule(app.rules, args)
         app.save_rules()
 
@@ -103,7 +103,7 @@ class RuleCommands(Commands):
         logger.info("action: list rules")
 
         app = App()
-        app.load_rules(args.dbpath)
+        app.load_rules(args.rule_db_path)
 
         for rule in app.rules:
             print("Rule", rule.guid,
@@ -118,7 +118,7 @@ class RuleCommands(Commands):
         logger.info("action: remove rule(s)")
 
         app = App()
-        app.load_rules(args.dbpath)
+        app.load_rules(args.rule_db_path)
 
         success = True
         for rule_lkup in args.rules_lkup:
@@ -144,7 +144,7 @@ class FileCommands(Commands):
         """
         logger.info("action: test")
 
-        self.app.load_rules(args.dbpath)
+        self.app.load_rules(args.rule_db_path)
         self.app.start_action(self.config.actlog_path,
                               args.silent_act_log)
 
@@ -195,7 +195,7 @@ class FileCommands(Commands):
         """
         logger.info("action: execution")
 
-        self.app.load_rules(args.dbpath)
+        self.app.load_rules(args.rule_db_path)
         self.app.start_action(self.config.actlog_path)
 
         for entry in (Path(p) for p in args.entries):
@@ -294,7 +294,7 @@ class Args:
         # identify what action to do and execute it
         args = parser.parse_args()
         self.load_conf(args)
-        self.find_dbpath(args)
+        self.find_rule_db_path(args)
         self.resolve(args,
                      parser.print_help,
                      rule_parser.print_help)
@@ -309,14 +309,14 @@ class Args:
         else:
             self.config = conf.default_conf()
 
-    def find_dbpath(self, args):
+    def find_rule_db_path(self, args):
         """
         Find database path from configuration file or cmd line argument.
         """
-        self._collapse_arg(args, "dbpath")
-        if args.dbpath is None:
-            args.dbpath = self.config.dbpath
-        args.dbpath = Path(args.dbpath)
+        self._collapse_arg(args, "rule_db_path")
+        if args.rule_db_path is None:
+            args.rule_db_path = self.config.rule_db_path
+        args.rule_db_path = Path(args.rule_db_path)
 
     def resolve(self, args,
                 mode_help,
@@ -373,7 +373,7 @@ class Args:
         parser.add_argument("--database",
                             help="database of rules",
                             metavar="path",
-                            dest="dbpath" + str(depth))
+                            dest="rule_db_path" + str(depth))
 
     def _insert_rule_lookup(self, parser,
                             optional: bool=True,

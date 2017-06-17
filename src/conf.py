@@ -25,8 +25,7 @@ confs = tuple(Path(c).expanduser() for c in confs)
 class Conf:
     def __init__(self):
         self.path = None
-        # TODO rename dbpath to db_path
-        self.dbpath = None
+        self.rule_db_path = None
         self.actlog_path = None
 
 
@@ -52,7 +51,7 @@ def load_conf(cf_path: Path):
     db_path = config["DEFAULT"].get("rules_db")
     if not db_path:
         db_path = "rules.pickle"
-    conf.dbpath = abspath_from_conf(cf_path, Path(db_path))
+    conf.rule_db_path = abspath_from_conf(cf_path, Path(db_path))
 
     # take action log from file
     actlog_path = config["DEFAULT"].get("action_log")
