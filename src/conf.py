@@ -6,6 +6,14 @@ import logger
 from utils import *
 
 
+# compatibility with 3.4
+if not hasattr(Path, "expanduser"):
+    import os.path
+    def expanduser(self):
+        return os.path.expanduser(str(self))
+    Path.expanduser = expanduser
+
+
 confs = (
     "./autorerename.conf.ini",
     "~/.local/share/autorerename/config.ini",
