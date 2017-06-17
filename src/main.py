@@ -250,6 +250,7 @@ class FolderCommands(Commands):
         app = App()
         app.open_action_log(self.config.actlog_path)
 
+        # TODO add format input from cmd
         for line in app.renamer.logs():
             s = self._status(line.success, line.mode)
             print("{}: '{}' --> '{}'".format(s, line.source, line.dest))

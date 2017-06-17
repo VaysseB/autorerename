@@ -91,13 +91,11 @@ class Renamer:
         self._file = None
 
     def _dump_log_before(self,
-                         from_: Path,
-                         to: Path,
+                         source: Path,
+                         dest: Path,
                          when: datetime.datetime,
                          rule_id: str,
                          mode: ActionFlag):
-        # TODO rename everywhere 'from_' to 'source' and 'to' to 'dest'
-
         # MAGIC_NUMBER will works as a separator to virtual ends the
         # previous/last action
         self._picklog.dump(MAGIC_NUMBER)
@@ -109,10 +107,10 @@ class Renamer:
 
         # files to rename, as in absolute (their real path) and
         # as they were seen
-        self._picklog.dump(str(from_.absolute()))
-        self._picklog.dump(str(to.absolute()))
-        self._picklog.dump(str(from_))
-        self._picklog.dump(str(to))
+        self._picklog.dump(str(source.absolute()))
+        self._picklog.dump(str(dest.absolute()))
+        self._picklog.dump(str(source))
+        self._picklog.dump(str(dest))
 
     def _dump_log_after(self, success: bool):
         self._picklog.dump(success)
@@ -123,19 +121,19 @@ class Renamer:
         return self._picklog is not None
 
     def rename(self,
-               from_: Path,
-               to: Path,
+               source: Path,
+               dest: Path,
                rule_id: str,
                action_mode: ActionFlag) -> bool:
         assert self.rename_dump_log_ready
-        self._dump_log_before(from_, to,
+        self._dump_log_before(source, dest,
                               datetime.datetime.now(),
                               rule_id,
                               action_mode)
 
         try:
             if action_mode.was_renamed:
-                from_.rename(to)
+                source.rename(dest)
             result = True
         except FileNotFoundError:
             result = False
