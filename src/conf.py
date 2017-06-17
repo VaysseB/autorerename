@@ -9,8 +9,8 @@ from utils import *
 # compatibility with 3.4
 if not hasattr(Path, "expanduser"):
     import os.path
-    def expanduser(self):
-        return os.path.expanduser(str(self))
+    def expanduser(self) -> Path:
+        return Path(os.path.expanduser(str(self)))
     Path.expanduser = expanduser
 
 
@@ -44,7 +44,7 @@ def load_conf(cfpath: Path):
     conf.path = cfpath
 
     config = configparser.ConfigParser()
-    with open(cfpath, "r") as input_:
+    with open(str(cfpath), "r") as input_:
         config.read_file(input_)
 
     # take content from file

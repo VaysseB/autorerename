@@ -35,7 +35,7 @@ def save_rules(path: Path, rules: engine.Rules):
     Save rules to file.
     """
     logger.info("Saving rules to %s", path)
-    with open(path, "wb") as output:
+    with open(str(path), "wb") as output:
         writer = pickle.Pickler(output, pickle.DEFAULT_PROTOCOL)
         writer.dump({
             "version": 1,
@@ -62,7 +62,7 @@ def load_rules(path: Path) -> engine.Rules:
         logger.info("empty database")
         return rules
 
-    with open(path, "rb") as input_:
+    with open(str(path), "rb") as input_:
         reader = pickle.Unpickler(input_)
 
         data = reader.load()

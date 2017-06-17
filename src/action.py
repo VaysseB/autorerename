@@ -29,7 +29,7 @@ class Renamer:
         self._read_log = None
 
     def start_write(self):
-        self._file = open(self.log_path, "a+b")
+        self._file = open(str(self.log_path), "a+b")
         self._dump_log = pickle.Pickler(self._file)
 
     def end(self):
@@ -63,7 +63,7 @@ class Renamer:
         return result
 
     def start_read(self):
-        self._file = open(self.log_path, "rb")
+        self._file = open(str(self.log_path), "rb")
         self._read_log = pickle.Unpickler(self._file)
 
     def logs(self):
