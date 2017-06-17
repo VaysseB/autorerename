@@ -10,11 +10,8 @@ MAGIC_NUMBER = 0x1100FE
 class ActionFlag(int):
     # Flag part
     RENAMED         = 0b0001
-    MANUAL          = 0b0010
-
-    # Flag holder
-    SIMULATION      = 0 # not RENAMED
-    AUTO_SCAN       = 0 # not MANUAL
+    MANUAL_RULE     = 0b0010
+    USER_ENTRY      = 0b0100
 
     @property
     def was_renamed(self) -> bool:
@@ -25,22 +22,32 @@ class ActionFlag(int):
         return not (self & self.RENAMED)
 
     @property
-    def is_manual(self) -> bool:
-        return bool(self & self.MANUAL)
+    def rule_is_manual(self) -> bool:
+        return bool(self & self.MANUAL_RULE)
 
     @property
-    def is_auto(self) -> bool:
-        return not (self & self.MANUAL)
+    def registered_rule(self) -> bool:
+        return not (self & self.MANUAL_RULE)
 
-    is_scan = is_auto
+    @property
+    def entry_was_given_manually(self) -> bool:
+        return bool(self & self.USER_ENTRY)
+
+    @property
+    def entry_was_found(self) -> bool:
+        return not (self & self.USER_ENTRY)
 
     @staticmethod
-    def from_(manual:bool, simulation:bool):
+    def from_(user_given_entry: bool,
+              rule_is_manual: bool,
+              simulation:bool):
         res = 0
         if not simulation:
             res += ActionFlag.RENAMED
-        if manual:
-            res += ActionFlag.MANUAL
+        if rule_is_manual:
+            res += ActionFlag.MANUAL_RULE
+        if user_given_entry:
+            res += ActionFlag.USER_ENTRY
         return ActionFlag(res)
 
 Flag = ActionFlag

@@ -150,17 +150,23 @@ class FileCommands(Commands):
 
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, args.rule_lkup,
-                       is_manual=True, only_simulate=True)
+                        user_given_entry=True,
+                        rule_is_manual=False,
+                        simulation=True)
 
         dir_paths = (Path(p) for p in args.dir_paths)
         for entry in scan_fs(dir_paths, recursive=False):
             self._apply(entry, args.rule_lkup,
-                       is_manual=False, only_simulate=True)
+                        user_given_entry=False,
+                        rule_is_manual=False,
+                        simulation=True)
 
         recur_paths = (Path(p) for p in args.recur_paths)
         for entry in scan_fs(recur_paths, recursive=True):
             self._apply(entry, args.rule_lkup,
-                       is_manual=False, only_simulate=True)
+                        user_given_entry=False,
+                        rule_is_manual=False,
+                        simulation=True)
 
         self.app.end_action()
 
@@ -175,7 +181,9 @@ class FileCommands(Commands):
 
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, args.rule_lkup,
-                        is_manual=True, only_simulate=False)
+                        user_given_entry=True,
+                        rule_is_manual=False,
+                        simulation=False)
 
         self.app.end_action()
 
@@ -191,20 +199,19 @@ class FileCommands(Commands):
                       else "#")
 
         status += ("m"
-                   if action_mode.is_manual
+                   if action_mode.rule_is_manual
                    else "r")
+        status += ("s"
+                   if action_mode.entry_was_found
+                   else "i")
 
         return status
 
     def _apply(self,
                entry: Path,
                rule_id_or_name: str,
-               is_manual: bool,
-               only_simulate: bool):
-
-        action_mode = action.Flag.from_(
-            manual=is_manual,
-            simulation=only_simulate)
+               **kw):
+        action_mode = action.Flag.from_(**kw)
 
         for (rule, new_entry) in self._reformat(self.app.rules, entry, rule_id_or_name):
 
@@ -221,7 +228,7 @@ class FileCommands(Commands):
                       file=sys.stderr)
 
             # stop trying to rename the file if it succeed and as it is for real
-            if not only_simulate and success:
+            if action_mode.was_renamed and success:
                 break
 
     def log(self, args):
@@ -252,7 +259,9 @@ class FileCommands(Commands):
 
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, rule.guid,
-                        is_manual=True, only_simulate=True)
+                        user_given_entry=True,
+                        rule_is_manual=True,
+                        simulation=True)
 
         self.app.end_action()
 
