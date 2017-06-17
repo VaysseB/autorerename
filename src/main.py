@@ -41,9 +41,9 @@ class App:
         self.renamer = action.Renamer(str(logpath.resolve()))
         self.renamer.start_read()
 
-    def start_action(self, logpath: Path):
+    def start_action(self, logpath: Path, silent: bool=False):
         self.renamer = action.Renamer(str(logpath.resolve()))
-        self.renamer.start_write()
+        self.renamer.start_write(is_silent_simulation=silent)
         self.rename = self.renamer.rename
 
     def end_action(self):
@@ -145,8 +145,8 @@ class FileCommands(Commands):
         logger.info("action: test")
 
         self.app.load_rules(args.dbpath)
-        self.app.start_action(self.config.actlog_path)
-        # TODO add a cmd switch to disable automatic log (and in conf)
+        self.app.start_action(self.config.actlog_path,
+                              args.silent_act_log)
 
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, args.rule_lkup,
@@ -166,6 +166,25 @@ class FileCommands(Commands):
             self._apply(entry, args.rule_lkup,
                         user_given_entry=False,
                         rule_is_manual=False,
+                        simulation=True)
+
+        self.app.end_action()
+
+    def manual_test(self, args):
+        """
+        Create a temporary rule and try handmade entries on it.
+        """
+        logger.info("action: manual test")
+
+        self.app.phony_rules()
+        rule = self._add_rule(self.app.rules, args)
+        self.app.start_action(self.config.actlog_path,
+                              args.silent_act_log)
+
+        for entry in (Path(p) for p in args.entries):
+            self._apply(entry, rule.guid,
+                        user_given_entry=True,
+                        rule_is_manual=True,
                         simulation=True)
 
         self.app.end_action()
@@ -244,26 +263,6 @@ class FileCommands(Commands):
         for line in app.renamer.logs():
             s = self._status(line.success, line.mode)
             print("{}: '{}' --> '{}'".format(s, line.source, line.dest))
-
-    def manual_test(self, args):
-        """
-        Create a temporary rule and try handmade entries on it.
-        """
-        logger.info("action: manual test")
-
-        self.app.phony_rules()
-        rule = self._add_rule(self.app.rules, args)
-
-        self.app.start_action(self.config.actlog_path)
-        # TODO add a cmd switch to disable automatic log (and in conf)
-
-        for entry in (Path(p) for p in args.entries):
-            self._apply(entry, rule.guid,
-                        user_given_entry=True,
-                        rule_is_manual=True,
-                        simulation=True)
-
-        self.app.end_action()
 
 
 class Args:
@@ -394,6 +393,13 @@ class Args:
                 nargs=("+" if multiple else 1),
                 action=("append" if multiple else "store"))
 
+    def _insert_silent_action_log(self, parser):
+        return parser.add_argument(
+            "--silent-log",
+            help="turn off action log",
+            dest="silent_act_log",
+            action="store_true")
+
     def _collapse_arg(self, args, prefix: str):
         """
         Find in args the first "<prefix><number>" and save into <prefix> the
@@ -439,6 +445,7 @@ class Args:
         self._add_conf_argument(parser, depth=2)
         self._add_db_argument(parser, depth=1)
         self._insert_rule_lookup(parser)
+        self._insert_silent_action_log(parser)
         parser.add_argument("entries",
                             help="manual entries to test",
                             metavar="text",
@@ -463,6 +470,7 @@ class Args:
             "manual-test",
             help="Manual test with rule specification."
         )
+        self._insert_silent_action_log(parser)
         parser.add_argument("id_rule",
                             help="regular expression to identify filename")
         parser.add_argument("rename_rule",

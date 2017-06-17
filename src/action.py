@@ -86,12 +86,20 @@ class Renamer:
         self.log_path = path
         self._file = None
         self._picklog = None
+        self.is_silent_simulation = False
 
-    def start_write(self):
+    def start_write(self, is_silent_simulation: bool=False):
+        self.is_silent_simulation = is_silent_simulation
+        if is_silent_simulation:
+            return
+
         self._file = open(str(self.log_path), "a+b")
         self._picklog = pickle.Pickler(self._file)
 
     def end(self):
+        if self.is_silent_simulation:
+            return
+
         self._picklog = None
         self._file.flush()
         self._file.close()
@@ -132,6 +140,9 @@ class Renamer:
                dest: Path,
                rule_id: str,
                action_mode: ActionFlag) -> bool:
+        if self.is_silent_simulation:
+            return True
+
         assert self.rename_dump_log_ready
         self._dump_log_before(source, dest,
                               datetime.datetime.now(),
