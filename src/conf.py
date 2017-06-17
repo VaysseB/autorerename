@@ -25,6 +25,7 @@ confs = tuple(Path(c).expanduser() for c in confs)
 class Conf:
     def __init__(self):
         self.path = None
+        # TODO rename dbpath to db_path
         self.dbpath = None
         self.actlog_path = None
 

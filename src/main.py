@@ -41,13 +41,12 @@ class App:
     def start_action(self, logpath: Path):
         self.renamer = action.Renamer(str(logpath.resolve()))
         self.renamer.start_write()
+        self.rename = self.renamer.rename
 
     def end_action(self):
+        self.rename = None
         self.renamer.end()
         self.renamer = None
-
-    def rename(self, from_: Path, to: Path) -> bool:
-        return self.renamer.rename(from_, to)
 
 
 class Commands:
@@ -62,17 +61,6 @@ class Commands:
         for (rule, entry, match) in rules.find_applying(entry, rule_id_or_name):
             result = rule.format(entry, match)
             yield (rule, result)
-
-    def simulate(self,
-                 rules: engine.Rules,
-                 entry: Path,
-                 rule_id_or_name: str=None) -> int:
-        counter = 0
-        for (rule, result) in self._reformat(rules, entry, rule_id_or_name):
-            counter += 1
-            print("$:{}: '{}' --> '{}'".format(
-                rule.name_prefix(), entry, result))
-        return counter
 
 
 class RuleCommands(Commands):
@@ -143,14 +131,16 @@ class RuleCommands(Commands):
         """
         logger.info("action: manual test")
 
-        rules = engine.Rules()
-        rule = self._add_rule(rules, args)
+        # TODO move it to FolderCommands
 
-        entries = (Path(p) for p in args.entries)
-        for entry in entries:
-            count = self.simulate(rules, entry)
-            logger.info("Tested {} -> {} on {} rules".format(
-                rule.identifier_as_text, rule.renamer_as_text, count))
+        # rules = engine.Rules()
+        # rule = self._add_rule(rules, args)
+
+        # entries = (Path(p) for p in args.entries)
+        # for entry in entries:
+            # count = self.simulate(rules, entry)
+            # logger.info("Tested {} -> {} on {} rules".format(
+                # rule.identifier_as_text, rule.renamer_as_text, count))
 
 
 class FolderCommands(Commands):
@@ -158,8 +148,11 @@ class FolderCommands(Commands):
     Commands applying on path.
     """
 
+    # TODO rename FolderCommands to FileCommands
+
     def __init__(self, config: conf.Conf):
         self.config = config
+        self.app = App()
 
     def test(self, args):
         """
@@ -167,19 +160,26 @@ class FolderCommands(Commands):
         """
         logger.info("action: test")
 
-        app = App()
-        app.load_rules(args.dbpath)
+        self.app.load_rules(args.dbpath)
+        self.app.start_action(self.config.actlog_path)
+
+        # TODO add a cmd switch to disable automatic log (and in conf)
 
         for entry in (Path(p) for p in args.entries):
-            self.simulate(app.rules, entry, args.rule_lkup)
+            self._apply(entry, args.rule_lkup,
+                       is_manual=True, only_simulate=True)
 
         dir_paths = (Path(p) for p in args.dir_paths)
         for entry in scan_fs(dir_paths, recursive=False):
-            self.simulate(app.rules, entry, args.rule_lkup)
+            self._apply(entry, args.rule_lkup,
+                       is_manual=False, only_simulate=True)
 
         recur_paths = (Path(p) for p in args.recur_paths)
         for entry in scan_fs(recur_paths, recursive=True):
-            self.simulate(app.rules, entry, args.rule_lkup)
+            self._apply(entry, args.rule_lkup,
+                       is_manual=False, only_simulate=True)
+
+        self.app.end_action()
 
     def rename(self, args):
         """
@@ -187,35 +187,51 @@ class FolderCommands(Commands):
         """
         logger.info("action: execution")
 
-        self.app = app = App()
-        app.load_rules(args.dbpath)
-        app.start_action(self.config.actlog_path)
+        self.app.load_rules(args.dbpath)
+        self.app.start_action(self.config.actlog_path)
 
+        action_mode = action.Mode.RENAME_MANUAL
         for entry in (Path(p) for p in args.entries):
-            self._apply_first_rename(app.rules, entry, args.rule_lkup)
+            self._apply(entry, args.rule_lkup,
+                        is_manual=True, only_simulate=False)
 
-        app.end_action()
+        self.app.end_action()
 
-    def _apply_first_rename(self,
-                           rules: engine.Rules,
-                           entry: Path,
-                           rule_id_or_name: str=None):
-        maybe_result = next(self._reformat(rules, entry, rule_id_or_name), None)
-        if maybe_result:
-            rule, result = maybe_result
-            return self._execute(rule, entry, result)
+    def _apply(self,
+               entry: Path,
+               rule_id_or_name: str,
+               is_manual: bool,
+               only_simulate: bool):
 
-    def _execute(self,
-                 rule: engine.Rule,
-                 entry: Path,
-                 new_entry: Path):
-        done = self.app.rename(entry, new_entry)
-        status = "#" if done else "!"
-        print("{}:{}: '{}' --> '{}'".format(
-            status, rule.name_prefix(), entry, new_entry))
-        if not done:
-            print("Cannot rename '{}' to '{}'".format(entry, new_entry),
-                  file=sys.stderr)
+        action_mode = action.Flag.from_(
+            manual=is_manual, simulation=only_simulate)
+
+        for (rule, new_entry) in self._reformat(self.app.rules, entry, rule_id_or_name):
+
+            # actually rename (if not a simulation) the file
+            success = self.app.rename(entry, new_entry, rule.guid, action_mode)
+
+            # TODO put status generation to a function
+            status = ""
+            if success:
+                if only_simulate:
+                    status = "S"
+                else:
+                    status = "#"
+            else:
+                status = "!"
+
+            # log to the user what has been done
+            print("{}:{}: '{}' --> '{}'".format(
+                status, rule.name_prefix(), entry, new_entry))
+
+            if not success:
+                print("Failed to rename '{}' to '{}'".format(entry, new_entry),
+                      file=sys.stderr)
+
+            # stop trying to rename the file if it succeed and as it is for real
+            if not only_simulate and success:
+                break
 
     def log(self, args):
         """
@@ -228,7 +244,7 @@ class FolderCommands(Commands):
 
         for line in app.renamer.logs():
             s = "#" if line.success else "!"
-            print("{}: '{}' --> '{}'".format(s, line.from_, line.to))
+            print("{}: '{}' --> '{}'".format(s, line.source, line.dest))
 
 
 class Args:
@@ -391,7 +407,7 @@ class Args:
     def install_log(self, subparser):
         parser = subparser.add_parser(
             "log",
-            help="Print the action log."
+            help="Print the rename log."
         )
         self._add_conf_argument(parser, depth=2)
         return parser
