@@ -29,33 +29,35 @@ class Conf:
         self.actlog_path = None
 
 
-def abspath_from_conf(cfpath: Path, path: Path):
+def abspath_from_conf(cf_path: Path, path: Path):
     return (path
             if path.is_absolute()
-            else cfpath.parent.joinpath(path)).resolve()
+            else cf_path.parent.joinpath(path)).resolve()
 
 
-def load_conf(cfpath: Path):
-    logger.info("load config file {}".format(cfpath))
-    if not cfpath:
+def load_conf(cf_path: Path):
+    logger.info("load config file {}".format(cf_path))
+    if not cf_path:
         return Conf()
 
     conf = Conf()
-    conf.path = cfpath
+    conf.path = cf_path
 
     config = configparser.ConfigParser()
-    with open(str(cfpath), "r") as input_:
+    with open(str(cf_path), "r") as input_:
         config.read_file(input_)
 
     # take content from file
-    dbpath = config["DEFAULT"].get("rules_db")
-    if dbpath:
-        conf.dbpath = abspath_from_conf(cfpath, Path(dbpath))
+    db_path = config["DEFAULT"].get("rules_db")
+    if not db_path:
+        db_path = "rules.pickle"
+    conf.dbpath = abspath_from_conf(cf_path, Path(db_path))
 
     # take action log from file
-    action_log_path = config["DEFAULT"].get("action_log")
-    if action_log_path:
-        conf.actlog_path = abspath_from_conf(cfpath, Path(action_log_path))
+    actlog_path = config["DEFAULT"].get("action_log")
+    if not actlog_path:
+        actlog_path = "actlog.pickle"
+    conf.actlog_path = abspath_from_conf(cf_path, Path(actlog_path))
 
     return conf
 
