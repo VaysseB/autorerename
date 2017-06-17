@@ -26,7 +26,6 @@ class Conf:
     def __init__(self):
         self.path = None
         self.dbpath = None
-        self.trpath = None
         self.actlog_path = None
 
 
