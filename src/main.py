@@ -391,7 +391,7 @@ class Args:
     def install_log(self, subparser):
         parser = subparser.add_parser(
             "log",
-            help="Print the rename log."
+            help="Print the action log."
         )
         self._add_conf_argument(parser, depth=2)
         return parser
