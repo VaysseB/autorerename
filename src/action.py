@@ -1,6 +1,5 @@
 
 from pathlib import Path
-import enum
 import datetime
 import pickle
 
@@ -8,31 +7,43 @@ import pickle
 MAGIC_NUMBER = 0x1100FE
 
 
-class ActionFlag(enum.IntFlag):
-    RENAME = 1          # file is renamed, otherwise it is a simulation
-    MANUAL = 2          # file given manually, otherwise it is found by scan
+class ActionFlag(int):
+    # Flag part
+    RENAMED         = 0b0001
+    MANUAL          = 0b0010
+
+    # Flag holder
+    SIMULATION      = 0 # not RENAMED
+    AUTO_SCAN       = 0 # not MANUAL
+
+    @property
+    def was_renamed(self) -> bool:
+        return bool(self & self.RENAMED)
+
+    @property
+    def is_simulated(self) -> bool:
+        return not (self & self.RENAMED)
+
+    @property
+    def is_manual(self) -> bool:
+        return bool(self & self.MANUAL)
+
+    @property
+    def is_auto(self) -> bool:
+        return not (self & self.MANUAL)
+
+    is_scan = is_auto
 
     @staticmethod
     def from_(manual:bool, simulation:bool):
-        res = ActionFlag(0)
+        res = 0
         if not simulation:
-            res &= ActionFlag.RENAME
+            res += ActionFlag.RENAMED
         if manual:
             res += ActionFlag.MANUAL
-        return res
+        return ActionFlag(res)
 
 Flag = ActionFlag
-
-
-class Mode(enum.IntEnum):
-    TEST_AUTO       = 0
-    TEST_MANUAL     = (ActionFlag.MANUAL)
-    RENAME_AUTO     = (ActionFlag.RENAME)
-    RENAME_MANUAL   = (ActionFlag.RENAME + ActionFlag.MANUAL)
-
-    def simulated(self):
-        return self & ~ActionFlag.RENAME
-
 
 
 class LogLine:
@@ -46,10 +57,16 @@ class LogLine:
          self.dest,
          *self._result) = data
 
+        self.mode = ActionFlag(self.mode)
+
     @property
     def success(self) -> bool:
         if self._result:
             return self._result[0]
+
+    @property
+    def datetime(self) -> datetime.datetime:
+        return datetime.datetime.strptime(self.when, 'auto')
 
 
 class Renamer:
@@ -78,7 +95,7 @@ class Renamer:
                          to: Path,
                          when: datetime.datetime,
                          rule_id: str,
-                         mode: Mode):
+                         mode: ActionFlag):
         # TODO rename everywhere 'from_' to 'source' and 'to' to 'dest'
 
         # MAGIC_NUMBER will works as a separator to virtual ends the
@@ -109,7 +126,7 @@ class Renamer:
                from_: Path,
                to: Path,
                rule_id: str,
-               action_mode: Mode) -> bool:
+               action_mode: ActionFlag) -> bool:
         assert self.rename_dump_log_ready
         self._dump_log_before(from_, to,
                               datetime.datetime.now(),
@@ -117,7 +134,7 @@ class Renamer:
                               action_mode)
 
         try:
-            if action_mode & ActionFlag.RENAME:
+            if action_mode.was_renamed:
                 from_.rename(to)
             result = True
         except FileNotFoundError:

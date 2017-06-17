@@ -190,12 +190,28 @@ class FolderCommands(Commands):
         self.app.load_rules(args.dbpath)
         self.app.start_action(self.config.actlog_path)
 
-        action_mode = action.Mode.RENAME_MANUAL
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, args.rule_lkup,
                         is_manual=True, only_simulate=False)
 
         self.app.end_action()
+
+    def _status(self,
+                success: bool,
+                action_mode: action.Flag):
+        status = ""
+        if not success:
+            status = "!"
+        else:
+            status = ("S"
+                      if action_mode.is_simulated
+                      else "#")
+
+        status += ("m"
+                   if action_mode.is_manual
+                   else "r")
+
+        return status
 
     def _apply(self,
                entry: Path,
@@ -204,26 +220,18 @@ class FolderCommands(Commands):
                only_simulate: bool):
 
         action_mode = action.Flag.from_(
-            manual=is_manual, simulation=only_simulate)
+            manual=is_manual,
+            simulation=only_simulate)
 
         for (rule, new_entry) in self._reformat(self.app.rules, entry, rule_id_or_name):
 
             # actually rename (if not a simulation) the file
             success = self.app.rename(entry, new_entry, rule.guid, action_mode)
 
-            # TODO put status generation to a function
-            status = ""
-            if success:
-                if only_simulate:
-                    status = "S"
-                else:
-                    status = "#"
-            else:
-                status = "!"
-
             # log to the user what has been done
             print("{}:{}: '{}' --> '{}'".format(
-                status, rule.name_prefix(), entry, new_entry))
+                self._status(success, action_mode),
+                rule.name_prefix(), entry, new_entry))
 
             if not success:
                 print("Failed to rename '{}' to '{}'".format(entry, new_entry),
@@ -243,7 +251,7 @@ class FolderCommands(Commands):
         app.open_action_log(self.config.actlog_path)
 
         for line in app.renamer.logs():
-            s = "#" if line.success else "!"
+            s = self._status(line.success, line.mode)
             print("{}: '{}' --> '{}'".format(s, line.source, line.dest))
 
 
