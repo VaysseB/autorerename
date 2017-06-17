@@ -131,7 +131,7 @@ class RuleCommands(Commands):
         """
         logger.info("action: manual test")
 
-        # TODO move it to FolderCommands
+        # TODO move it to FileCommands
 
         # rules = engine.Rules()
         # rule = self._add_rule(rules, args)
@@ -143,12 +143,10 @@ class RuleCommands(Commands):
                 # rule.identifier_as_text, rule.renamer_as_text, count))
 
 
-class FolderCommands(Commands):
+class FileCommands(Commands):
     """
     Commands applying on path.
     """
-
-    # TODO rename FolderCommands to FileCommands
 
     def __init__(self, config: conf.Conf):
         self.config = config
@@ -317,7 +315,7 @@ class Args:
         """
         # specify all commands possible
         rc = RuleCommands(self.config)
-        fc = FolderCommands(self.config)
+        fc = FileCommands(self.config)
 
         # actions reachable from cmd line args
         # special "_key" : key to find the value in args to find the next action
