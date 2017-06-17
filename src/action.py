@@ -189,3 +189,11 @@ class Renamer:
         except EOFError:
             if line:
                 yield LogLine(line)
+
+
+def clear_log(log_path: Path) -> bool:
+    if not log_path.exists():
+        return True
+    elif log_path.is_file():
+        log_path.unlink()
+    return not log_path.exists()

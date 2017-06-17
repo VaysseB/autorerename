@@ -256,13 +256,23 @@ class FileCommands(Commands):
         """
         logger.info("action: log")
 
-        app = App()
-        app.open_action_log(self.config.actlog_path)
+        self.app.open_action_log(self.config.actlog_path)
 
         # TODO add format input from cmd
-        for line in app.renamer.logs():
+        for line in self.app.renamer.logs():
             s = self._status(line.success, line.mode)
             print("{}: '{}' --> '{}'".format(s, line.source, line.dest))
+
+    def clear_log(self, args):
+        """
+        Clear the action log.
+        """
+        logger.info("action: clear log")
+
+        if action.clear_log(self.config.actlog_path):
+            print("Action log cleared.")
+        else:
+            print("Failed to clear the action log.")
 
 
 class Args:
@@ -335,7 +345,12 @@ class Args:
             "_key": "mode",
             "_help": mode_help,
             "test": fc.test,
-            "log": fc.log,
+            "log": {
+                "_key": "clear",
+                "_help": None,
+                False: fc.log,
+                True: fc.clear_log
+            },
             "rename": fc.rename,
             "manual-test": fc.manual_test,
             "rules": {
@@ -432,9 +447,12 @@ class Args:
     def install_log(self, subparser):
         parser = subparser.add_parser(
             "log",
-            help="Print the rename log."
+            help="Print or manage the action log."
         )
         self._add_conf_argument(parser, depth=2)
+        parser.add_argument("--clear",
+                            help="Wipe out the log.",
+                            action="store_true")
         return parser
 
     def install_test(self, subparser):
