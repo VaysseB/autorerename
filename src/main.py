@@ -432,7 +432,10 @@ class Args:
     def install_action(self, subparser):
         parser = subparser.add_parser(
             "rename",
-            help="Rename files."
+            help="Rename files.",
+            description=("Rename files."
+                         " Try to apply all registered rules or only one if"
+                         " given.")
         )
         self._add_conf_argument(parser, depth=2)
         self._add_db_argument(parser, depth=1)
@@ -447,7 +450,8 @@ class Args:
     def install_log(self, subparser):
         parser = subparser.add_parser(
             "log",
-            help="Print or manage the action log."
+            help="Print or manage the action log.",
+            description="Print or manage the action log."
         )
         self._add_conf_argument(parser, depth=2)
         parser.add_argument("--clear",
@@ -458,7 +462,8 @@ class Args:
     def install_test(self, subparser):
         parser = subparser.add_parser(
             "test",
-            help="Testing of rules and their application."
+            help="Testing of registered rules.",
+            description="Test registered rules, on manual or scan entries."
         )
         self._add_conf_argument(parser, depth=2)
         self._add_db_argument(parser, depth=1)
@@ -486,7 +491,8 @@ class Args:
     def install_manual_test(self, subparser):
         parser = subparser.add_parser(
             "manual-test",
-            help="Manual test with rule specification."
+            help="Manual test with rule specification.",
+            description="Test manually input rule."
         )
         self._insert_silent_action_log(parser)
         parser.add_argument("id_rule",
@@ -502,7 +508,8 @@ class Args:
     def install_rules(self, subparser):
         parser = subparser.add_parser(
             "rules",
-            help="Manage rules."
+            help="Manage rules.",
+            description="Manage rules."
         )
         self._add_conf_argument(parser, depth=2)
         self._add_db_argument(parser, depth=1)
@@ -519,7 +526,8 @@ class Args:
     def install_add_rule(self, subparser):
         parser = subparser.add_parser(
             "add",
-            help="Add a rule."
+            help="Add a rule.",
+            description="Add a rule into the rule database."
         )
         self._add_conf_argument(parser, depth=3)
         self._add_db_argument(parser, depth=2)
@@ -535,7 +543,8 @@ class Args:
     def install_list_rules(self, subparser):
         parser = subparser.add_parser(
             "list",
-            help="List rules."
+            help="List rules.",
+            description="List rules from the rule database."
         )
         self._add_conf_argument(parser, depth=3)
         self._add_db_argument(parser, depth=2)
@@ -544,7 +553,8 @@ class Args:
     def install_remove_rule(self, subparser):
         parser = subparser.add_parser(
             "remove",
-            help="Remove a rule."
+            help="Remove a rule.",
+            description="Remove a rule from the rule database."
         )
         self._add_conf_argument(parser, depth=3)
         self._add_db_argument(parser, depth=2)
