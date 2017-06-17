@@ -24,6 +24,9 @@ class App:
         self.rule_path = None
         self.renamer = None
 
+    def phony_rules(self):
+        self.rules = engine.Rules()
+
     def load_rules(self, filepath: Path):
         self.rule_path = filepath
         self.rules = well.load_rules(filepath)
@@ -62,15 +65,6 @@ class Commands:
             result = rule.format(entry, match)
             yield (rule, result)
 
-
-class RuleCommands(Commands):
-    """
-    Commands CRUD on rules and test.
-    """
-
-    def __init__(self, config: conf.Conf):
-        self.config = config
-
     def _add_rule(self, rules: engine.Rules, args):
         """
         Add a rule from data in args.
@@ -81,6 +75,15 @@ class RuleCommands(Commands):
             rename_rule=args.rename_rule,
             name=getattr(args, "name", None))
         return rule
+
+
+class RuleCommands(Commands):
+    """
+    Commands CRUD on rules and test.
+    """
+
+    def __init__(self, config: conf.Conf):
+        self.config = config
 
     def add(self, args):
         """
@@ -125,23 +128,6 @@ class RuleCommands(Commands):
         if not success:
             return EXIT_ERROR
 
-    def manual_test(self, args):
-        """
-        Create a temporary rule and try handmade entries on it.
-        """
-        logger.info("action: manual test")
-
-        # TODO move it to FileCommands
-
-        # rules = engine.Rules()
-        # rule = self._add_rule(rules, args)
-
-        # entries = (Path(p) for p in args.entries)
-        # for entry in entries:
-            # count = self.simulate(rules, entry)
-            # logger.info("Tested {} -> {} on {} rules".format(
-                # rule.identifier_as_text, rule.renamer_as_text, count))
-
 
 class FileCommands(Commands):
     """
@@ -160,7 +146,6 @@ class FileCommands(Commands):
 
         self.app.load_rules(args.dbpath)
         self.app.start_action(self.config.actlog_path)
-
         # TODO add a cmd switch to disable automatic log (and in conf)
 
         for entry in (Path(p) for p in args.entries):
@@ -253,6 +238,24 @@ class FileCommands(Commands):
             s = self._status(line.success, line.mode)
             print("{}: '{}' --> '{}'".format(s, line.source, line.dest))
 
+    def manual_test(self, args):
+        """
+        Create a temporary rule and try handmade entries on it.
+        """
+        logger.info("action: manual test")
+
+        self.app.phony_rules()
+        rule = self._add_rule(self.app.rules, args)
+
+        self.app.start_action(self.config.actlog_path)
+        # TODO add a cmd switch to disable automatic log (and in conf)
+
+        for entry in (Path(p) for p in args.entries):
+            self._apply(entry, rule.guid,
+                        is_manual=True, only_simulate=True)
+
+        self.app.end_action()
+
 
 class Args:
     """
@@ -326,7 +329,7 @@ class Args:
             "test": fc.test,
             "log": fc.log,
             "rename": fc.rename,
-            "manual-test": rc.manual_test,
+            "manual-test": fc.manual_test,
             "rules": {
                 "_key": "action",
                 "_help": rule_help,
