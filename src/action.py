@@ -3,6 +3,8 @@ from pathlib import Path
 import datetime
 import pickle
 
+import logger
+
 
 MAGIC_NUMBER = 0x1100FE
 
@@ -217,10 +219,18 @@ class Renamer:
 
         try:
             if action_mode.was_renamed:
+                if dest.exists():
+                    logger.warn("File already exists: {}".format(dest))
+                    return False
+
+                # make sure folder exists if it was changed
                 dest.parent.mkdir(parents=False, exist_ok=True)
+                # move or rename file
                 source.rename(dest)
+
             result = True
         except FileNotFoundError:
+            logger.warn("File not found: {}".format(source))
             result = False
 
         self._dump_log_after(result)

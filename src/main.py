@@ -226,6 +226,8 @@ class FileCommands(Commands):
         self.app.start_action(self.config.actlog_path, silent=False)
 
         # TODO add scan
+        # TODO add cmd switch to prevent folder creation
+        # TODO add cmd switch to prune empty folder after rename
 
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, args.rule_lkup,
@@ -270,10 +272,6 @@ class FileCommands(Commands):
             print("{}:{}: '{}' --> '{}'".format(
                 self._status(success, action_mode),
                 rule.name_prefix(), entry, new_entry))
-
-            if not success:
-                print("Failed to rename '{}' to '{}'".format(entry, new_entry),
-                      file=sys.stderr)
 
             # stop trying to rename the file if it succeed and as it is for real
             if action_mode.was_renamed and success:
