@@ -13,13 +13,12 @@ import book
 
 
 def serialize_rule(rule: book.Rule) -> dict:
-    # TODO add type in from of each value
     return {
-        "guid": rule.guid,
-        "id": rule.identifier_as_text,
-        "rn": rule.renamer_as_text,
-        "name": rule.name,
-        "height": rule.height
+        "guid": str(rule.guid),
+        "id": str(rule.identifier_as_text),
+        "rn": str(rule.renamer_as_text),
+        "name": str(rule.name) if rule.name else None,
+        "height": int(rule.height)
     }
 
 
