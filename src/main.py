@@ -23,6 +23,7 @@ class App:
         self.rules = None
         self.rule_path = None
         self.renamer = None
+        self.action_log = None
 
     def phony_rules(self):
         self.rules = engine.Rules()
@@ -37,19 +38,30 @@ class App:
         else:
             logger.warn("no path of database to save rules")
 
-    def open_action_log(self, logpath: Path):
-        self.renamer = action.Renamer(str(logpath.resolve()))
-        self.renamer.start_read()
+    def set_action_log(self, path: Path):
+        self.action_log = action.Log(path)
 
-    def start_action(self, logpath: Path, silent: bool=False):
-        self.renamer = action.Renamer(str(logpath.resolve()))
-        self.renamer.start_write(is_silent_simulation=silent)
+    def open_action_log(self, actlog_path: Path):
+        self.set_action_log(actlog_path)
+        self.action_log.open_read()
+
+    def start_action(self, actlog_path: Path, silent: bool=False):
+        if silent:
+            self.rename = lambda *_: True
+            return
+
+        self.set_action_log(actlog_path)
+        self.action_log.open_write()
+        self.renamer = action.Renamer(self.action_log)
         self.rename = self.renamer.rename
 
     def end_action(self):
+        if not self.action_log:
+            return
+
         self.rename = None
-        self.renamer.end()
         self.renamer = None
+        self.action_log.close_write()
 
 
 class Commands:
@@ -146,7 +158,7 @@ class FileCommands(Commands):
 
         self.app.load_rules(args.rule_db_path)
         self.app.start_action(self.config.actlog_path,
-                              args.silent_act_log)
+                              silent=args.silent_act_log)
 
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, args.rule_lkup,
@@ -179,7 +191,7 @@ class FileCommands(Commands):
         self.app.phony_rules()
         rule = self._add_rule(self.app.rules, args)
         self.app.start_action(self.config.actlog_path,
-                              args.silent_act_log)
+                              silent=args.silent_act_log)
 
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, rule.guid,
@@ -210,7 +222,7 @@ class FileCommands(Commands):
         logger.info("action: execution")
 
         self.app.load_rules(args.rule_db_path)
-        self.app.start_action(self.config.actlog_path)
+        self.app.start_action(self.config.actlog_path, silent=False)
 
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, args.rule_lkup,
@@ -273,7 +285,7 @@ class FileCommands(Commands):
         self.app.open_action_log(self.config.actlog_path)
 
         # TODO add format input from cmd
-        for line in self.app.renamer.logs():
+        for line in self.app.action_log.read_iter():
             s = self._status(line.success, line.mode)
             print("{}: '{}' --> '{}'".format(s, line.source, line.dest))
 
@@ -283,7 +295,9 @@ class FileCommands(Commands):
         """
         logger.info("action: clear log")
 
-        if action.clear_log(self.config.actlog_path):
+        self.app.set_action_log(self.config.actlog_path)
+
+        if self.app.action_log.clear():
             print("Action log cleared.")
         else:
             print("Failed to clear the action log.")

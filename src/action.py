@@ -54,6 +54,10 @@ Flag = ActionFlag
 
 
 class LogLine:
+    """
+    Line from the action log.
+    """
+
     def __init__(self, data):
         (self.when,
          self.rule_id,
@@ -76,100 +80,64 @@ class LogLine:
         return datetime.datetime.strptime(self.when, 'auto')
 
 
-class Renamer:
+class Log:
     """
-    Class to rename/move files.
-    All actions are logged into a file prior and after execution.
+    Log of all actions taken (even simulated).
     """
 
-    def __init__(self, path: str=None):
-        self.log_path = path
+    def __init__(self, path: Path):
+        self.path = path
         self._file = None
         self._picklog = None
-        self.is_silent_simulation = False
 
-    def start_write(self, is_silent_simulation: bool=False):
-        self.is_silent_simulation = is_silent_simulation
-        if is_silent_simulation:
-            return
-
-        self._file = open(str(self.log_path), "a+b")
+    def open_write(self):
+        """
+        Open the log to write into it.
+        """
+        self._file = open(str(self.path), "a+b")
         self._picklog = pickle.Pickler(self._file)
 
-    def end(self):
-        if self.is_silent_simulation:
-            return
-
+    def close_write(self):
+        """
+        Flush the log and disable writing.
+        """
         self._picklog = None
         self._file.flush()
         self._file.close()
         self._file = None
 
-    def _dump_log_before(self,
-                         source: Path,
-                         dest: Path,
-                         when: datetime.datetime,
-                         rule_id: str,
-                         mode: ActionFlag):
-        # MAGIC_NUMBER will works as a separator to virtual ends the
-        # previous/last action
-        self._picklog.dump(MAGIC_NUMBER)
+    @property
+    def ready_to_write(self):
+        return self._file and isinstance(self._picklog, pickle.Pickler)
 
-        # general info about the action
-        self._picklog.dump(str(when.isoformat()))
-        self._picklog.dump(str(rule_id))
-        self._picklog.dump(int(mode))
+    def write(self, what):
+        """
+        Write something into the log.
+        """
+        self._picklog.dump(what)
 
-        # files to rename, as in absolute (their real path) and
-        # as they were seen
-        self._picklog.dump(str(source.absolute()))
-        self._picklog.dump(str(dest.absolute()))
-        self._picklog.dump(str(source))
-        self._picklog.dump(str(dest))
-
-    def _dump_log_after(self, success: bool):
-        self._picklog.dump(success)
+    def flush(self):
+        """
+        Force flush of the log file.
+        """
         self._file.flush()
 
-    @property
-    def rename_dump_log_ready(self):
-        return self._picklog is not None
-
-    def rename(self,
-               source: Path,
-               dest: Path,
-               rule_id: str,
-               action_mode: ActionFlag) -> bool:
-        if self.is_silent_simulation:
-            return True
-
-        assert self.rename_dump_log_ready
-        self._dump_log_before(source, dest,
-                              datetime.datetime.now(),
-                              rule_id,
-                              action_mode)
-
+    def open_read(self):
+        """
+        Open the log to read from it.
+        """
         try:
-            if action_mode.was_renamed:
-                source.rename(dest)
-            result = True
-        except FileNotFoundError:
-            result = False
-
-        self._dump_log_after(result)
-
-        return result
-
-    def start_read(self):
-        try:
-            self._file = open(str(self.log_path), "rb")
+            self._file = open(str(self.path), "rb")
         except FileNotFoundError:
             import io
             self._file = io.BytesIO()
         finally:
             self._picklog = pickle.Unpickler(self._file)
 
-    def logs(self):
+    def read_iter(self) -> LogLine:
+        """
+        Read line by line the log.
+        """
         line = []
         try:
             data = self._picklog.load()
@@ -190,10 +158,71 @@ class Renamer:
             if line:
                 yield LogLine(line)
 
+    def clear(self) -> bool:
+        """
+        Makes sure the log file is removed.
+        """
+        if not self.path.exists():
+            return True
+        elif self.path.is_file():
+            self.path.unlink()
+        return not self.path.exists()
 
-def clear_log(log_path: Path) -> bool:
-    if not log_path.exists():
-        return True
-    elif log_path.is_file():
-        log_path.unlink()
-    return not log_path.exists()
+
+class Renamer:
+    """
+    Class to rename/move files.
+    All actions are logged into a file prior and after execution.
+    """
+
+    def __init__(self, log: Log):
+        self.log = log
+
+    def _dump_log_before(self,
+                         source: Path,
+                         dest: Path,
+                         when: datetime.datetime,
+                         rule_id: str,
+                         mode: ActionFlag):
+        # MAGIC_NUMBER will works as a separator to virtual ends the
+        # previous/last action
+        self.log.write(MAGIC_NUMBER)
+
+        # general info about the action
+        self.log.write(str(when.isoformat()))
+        self.log.write(str(rule_id))
+        self.log.write(int(mode))
+
+        # files to rename, as in absolute (their real path) and
+        # as they were seen
+        self.log.write(str(source.absolute()))
+        self.log.write(str(dest.absolute()))
+        self.log.write(str(source))
+        self.log.write(str(dest))
+
+    def _dump_log_after(self, success: bool):
+        self.log.write(success)
+        self.log.flush()
+
+    def rename(self,
+               source: Path,
+               dest: Path,
+               rule_id: str,
+               action_mode: ActionFlag) -> bool:
+        assert self.log and self.log.ready_to_write
+        self._dump_log_before(source, dest,
+                              datetime.datetime.now(),
+                              rule_id,
+                              action_mode)
+
+        try:
+            if action_mode.was_renamed:
+                source.rename(dest)
+            result = True
+        except FileNotFoundError:
+            result = False
+
+        self._dump_log_after(result)
+
+        return result
+
