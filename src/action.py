@@ -224,7 +224,7 @@ class Renamer:
                     return False
 
                 # make sure folder exists if it was changed
-                dest.parent.mkdir(parents=False, exist_ok=True)
+                dest.parent.mkdir(parents=True, exist_ok=True)
                 # move or rename file
                 source.rename(dest)
 

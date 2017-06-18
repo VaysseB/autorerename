@@ -112,6 +112,9 @@ class ConfigCommands(Commands):
         cf = conf.Conf()
         cf.path = path
 
+        cf.rule_db_path.parent.mkdir(parents=True, exist_ok=True)
+        cf.actlog_path.parent.mkdir(parents=True, exist_ok=True)
+
         conf.save_conf(cf)
         print("Create repositiory at {}".format(cf.path))
 
