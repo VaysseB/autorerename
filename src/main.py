@@ -229,25 +229,36 @@ class FileCommands(Commands):
         # TODO add cmd switch to prevent folder creation
         # TODO add cmd switch to prune empty folder after rename
 
+        self.abort = False
+
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, args.rule_lkup,
                         user_given_entry=True,
                         rule_is_manual=False,
-                        simulation=False)
+                        simulation=False,
+                        confirmation=args.ask_to_confirm)
+            if self.abort:
+                break
 
         dir_paths = (Path(p) for p in args.dir_paths)
         for entry in scan_fs(dir_paths, recursive=False):
             self._apply(entry, args.rule_lkup,
                         user_given_entry=False,
                         rule_is_manual=False,
-                        simulation=False)
+                        simulation=False,
+                        confirmation=args.ask_to_confirm)
+            if self.abort:
+                break
 
         recur_paths = (Path(p) for p in args.recur_paths)
         for entry in scan_fs(recur_paths, recursive=True):
             self._apply(entry, args.rule_lkup,
                         user_given_entry=False,
                         rule_is_manual=False,
-                        simulation=False)
+                        simulation=False,
+                        confirmation=args.ask_to_confirm)
+            if self.abort:
+                break
 
         self.app.end_action()
 
@@ -271,13 +282,52 @@ class FileCommands(Commands):
 
         return status
 
+    ACCEPT      = 1
+    DISCARD     = 2
+    SKIP_FILE   = 3
+    STOP_ACTION = 4
+
+    def _confirm(self, entry: Path, new_entry: Path):
+        msg = "rename: '{}' --> '{}'  [y]es/[n]o/[s]kip/[q]uit ? ".format(entry, new_entry)
+        answers = {
+            # accept
+            "y": self.ACCEPT,
+            "Y": self.ACCEPT,
+            # cancel
+            "n": self.DISCARD,
+            "N": self.DISCARD,
+            # skip file
+            "s": self.SKIP_FILE,
+            "S": self.SKIP_FILE,
+            # quit
+            "q": self.STOP_ACTION,
+            "Q": self.STOP_ACTION
+        }
+        res = input(msg)
+        while res not in answers:
+            print("Invalid answer.")
+            res = input(msg)
+
+        return answers[res]
+
     def _apply(self,
                entry: Path,
                rule_id_or_name: str,
+               confirmation: bool=False,
                **kw):
         action_mode = action.Flag.from_(**kw)
 
         for (rule, new_entry) in self._reformat(self.app.rules, entry, rule_id_or_name):
+
+            if confirmation:
+                choice = self._confirm(entry, new_entry)
+                if choice == self.DISCARD:
+                    continue
+                elif choice == self.SKIP_FILE:
+                    break
+                elif choice == self.STOP_ACTION:
+                    self.abort = True
+                    break
 
             # actually rename (if not a simulation) the file
             success = self.app.rename(entry, new_entry, rule.guid, action_mode)
@@ -485,6 +535,10 @@ class Args:
         self._add_conf_argument(parser, depth=2)
         self._add_db_argument(parser, depth=1)
         self._insert_rule_lookup(parser)
+        parser.add_argument("-i", "--interactive",
+                            help="prompt before every action",
+                            dest="ask_to_confirm",
+                            action="store_true")
         parser.add_argument("entries",
                             help="manual entries to rename",
                             metavar="text",
