@@ -120,7 +120,8 @@ class RuleCommands(Commands):
 
         for rule in app.rules:
             print("Rule", rule.guid,
-                  ((" as " + rule.name) if rule.name else ""))
+                  ((" as " + rule.name) if rule.name else ""),
+                  ((" depth:" + str(rule.height)) if rule.height else ""))
             print("  from '" + rule.identifier_as_text + "'")
             print("    to '" + rule.renamer_as_text + "'")
 
