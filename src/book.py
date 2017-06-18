@@ -4,9 +4,28 @@ import itertools
 import hashlib
 import datetime
 from pathlib import Path
+import string
 
 import logger
 from utils import *
+
+
+class FileFormatter(string.Formatter):
+    def __init__(self, *args, **kw):
+        super(FileFormatter, self).__init__(*args, **kw)
+        self._conversions = {
+            "u": str.upper,
+            "l": str.lower,
+            "c": str.capitalize
+        }
+
+    def convert_field(self, value, conversion):
+        action = self._conversions.get(conversion, None)
+        if action:
+            return action(value)
+        return super(FileFormatter, self).convert_field(value, conversion)
+
+file_formatter = FileFormatter()
 
 
 class Rule:
@@ -81,9 +100,11 @@ class Rule:
         prefix = match.string[:match.start()]
         suffix = match.string[match.end():]
 
-        updated_name = self.renamer.format(None,
-                                           *match.groups(),
-                                           **match.groupdict())
+        updated_name = file_formatter.format(
+            self.renamer,
+            None,
+            *match.groups(),
+            **match.groupdict())
 
         return self.untouched_root(path) / Path(prefix + updated_name + suffix)
 
