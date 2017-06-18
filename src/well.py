@@ -9,10 +9,10 @@ from pathlib import Path
 import pickle
 
 import logger
-import engine
+import book
 
 
-def serialize_rule(rule: engine.Rule) -> dict:
+def serialize_rule(rule: book.Rule) -> dict:
     # TODO add type in from of each value
     return {
         "guid": rule.guid,
@@ -23,7 +23,7 @@ def serialize_rule(rule: engine.Rule) -> dict:
     }
 
 
-def deserialize_rule(rules: engine.Rules, data: dict) -> engine.Rule:
+def deserialize_rule(rules: book.Rules, data: dict) -> book.Rule:
     return rules.add(
         id_rule=data["id"],
         rename_rule=data["rn"],
@@ -33,7 +33,7 @@ def deserialize_rule(rules: engine.Rules, data: dict) -> engine.Rule:
     )
 
 
-def save_rules(path: Path, rules: engine.Rules):
+def save_rules(path: Path, rules: book.Rules):
     """
     Save rules to file.
     """
@@ -47,11 +47,11 @@ def save_rules(path: Path, rules: engine.Rules):
     logger.info("Rules saved.")
 
 
-def load_rules(path: Path) -> engine.Rules:
+def load_rules(path: Path) -> book.Rules:
     """
     Load rules from file.
     """
-    rules = engine.Rules()
+    rules = book.Rules()
 
     logger.info("Loading rules from %s", path)
 

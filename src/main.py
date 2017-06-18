@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 import logger
-import engine
+import book
 import well
 import conf
 import action
@@ -26,7 +26,7 @@ class App:
         self.action_log = None
 
     def phony_rules(self):
-        self.rules = engine.Rules()
+        self.rules = book.Rules()
 
     def load_rules(self, filepath: Path):
         self.rule_path = filepath
@@ -70,14 +70,14 @@ class Commands:
     """
 
     def _reformat(self,
-                  rules: engine.Rules,
+                  rules: book.Rules,
                   entry: Path,
                   rule_id_or_name: str=None) -> int:
         for (rule, entry, match) in rules.find_applying(entry, rule_id_or_name):
             result = rule.format(entry, match)
             yield (rule, result)
 
-    def _add_rule(self, rules: engine.Rules, args):
+    def _add_rule(self, rules: book.Rules, args):
         """
         Add a rule from data in args.
         Shorthand version.
