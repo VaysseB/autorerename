@@ -8,7 +8,6 @@ from pathlib import Path
 import logger
 from utils import *
 
-# TODO rename file to 'book'
 
 class Rule:
     """
