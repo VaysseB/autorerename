@@ -21,12 +21,15 @@ confs = (
 )
 confs = tuple(Path(c).expanduser() for c in confs)
 
+DEFAULT_RULE_DB_PATH = Path(".priv/rules")
+DEFAULT_ACTION_LOG_PATH = Path(".priv/action_log")
+
 
 class Conf:
     def __init__(self):
         self.path = None
-        self.rule_db_path = None
-        self.actlog_path = None
+        self.rule_db_path = DEFAULT_RULE_DB_PATH
+        self.actlog_path = DEFAULT_ACTION_LOG_PATH
 
 
 def abspath_from_conf(cf_path: Path, path: Path):
@@ -36,7 +39,6 @@ def abspath_from_conf(cf_path: Path, path: Path):
 
 
 def load_conf(cf_path: Path):
-    # TODO add default value for path when not configuration
     logger.info("load config file {}".format(cf_path))
     if not cf_path:
         return Conf()
@@ -49,15 +51,13 @@ def load_conf(cf_path: Path):
         config.read_file(input_)
 
     # take content from file
-    db_path = config["DEFAULT"].get("rules_db")
-    if not db_path:
-        db_path = "rules.pickle"
+    db_path = config["DEFAULT"].get("rules_db",
+                                    fallback=conf.rule_db_path)
     conf.rule_db_path = abspath_from_conf(cf_path, Path(db_path))
 
     # take action log from file
-    actlog_path = config["DEFAULT"].get("action_log")
-    if not actlog_path:
-        actlog_path = "actlog.pickle"
+    actlog_path = config["DEFAULT"].get("action_log",
+                                        fallback=conf.actlog_path)
     conf.actlog_path = abspath_from_conf(cf_path, Path(actlog_path))
 
     return conf
@@ -67,3 +67,12 @@ def default_conf():
     path = first_that(Path.exists, confs)
     logger.info("default conf at {}".format(path))
     return load_conf(path)
+
+
+def save_conf(conf: Conf):
+    config = configparser.ConfigParser()
+    config["DEFAULT"]["rules_db"] = str(conf.rule_db_path)
+    config["DEFAULT"]["action_log"] = str(conf.actlog_path)
+
+    with open(str(conf.path), "w") as output:
+        config.write(output)

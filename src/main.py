@@ -91,6 +91,31 @@ class Commands:
         return rule
 
 
+class ConfigCommands(Commands):
+    """
+    Commands on the repository itself (like the configuration file).
+    """
+
+    def __init__(self, config: conf.Conf):
+        pass
+
+    def init(self, args):
+        logger.info("action: init")
+
+        path = (Path(args.path) if args.path else Path())
+        path = path.expanduser().resolve().joinpath("autorerename.conf.ini")
+
+        if path.exists():
+            print("It already exists.")
+            return EXIT_ERROR
+
+        cf = conf.Conf()
+        cf.path = path
+
+        conf.save_conf(cf)
+        print("Create repositiory at {}".format(cf.path))
+
+
 class RuleCommands(Commands):
     """
     Commands CRUD on rules and test.
@@ -391,6 +416,7 @@ class Args:
             title="mode",
             dest="mode",
             help="Mode to use")
+        self.install_init(subparser)
         self.install_action(subparser)
         self.install_log(subparser)
         self.install_test(subparser)
@@ -431,6 +457,7 @@ class Args:
         Find what action to and execute it.
         """
         # specify all commands possible
+        cf = ConfigCommands(self.config)
         rc = RuleCommands(self.config)
         fc = FileCommands(self.config)
 
@@ -440,6 +467,7 @@ class Args:
         action = {
             "_key": "mode",
             "_help": mode_help,
+            "init": cf.init,
             "test": fc.test,
             "log": {
                 "_key": "clear",
@@ -524,6 +552,19 @@ class Args:
             depth += 1
             key = prefix + str(depth)
         setattr(args, prefix, value)
+
+    def install_init(self, subparser):
+        parser = subparser.add_parser(
+            "init",
+            help="Initialise a repository.",
+            description=("Create a repository with an empty set of rules.")
+        )
+        parser.add_argument("-p", "--path",
+                            help="Folder to initiate in (default is current)",
+                            metavar="path",
+                            dest="path",
+                            action="store")
+        return parser
 
     def install_action(self, subparser):
         parser = subparser.add_parser(
