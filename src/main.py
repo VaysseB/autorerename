@@ -225,13 +225,26 @@ class FileCommands(Commands):
         self.app.load_rules(args.rule_db_path)
         self.app.start_action(self.config.actlog_path, silent=False)
 
-        # TODO add scan
         # TODO add cmd switch to prevent folder creation
         # TODO add cmd switch to prune empty folder after rename
 
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, args.rule_lkup,
                         user_given_entry=True,
+                        rule_is_manual=False,
+                        simulation=False)
+
+        dir_paths = (Path(p) for p in args.dir_paths)
+        for entry in scan_fs(dir_paths, recursive=False):
+            self._apply(entry, args.rule_lkup,
+                        user_given_entry=False,
+                        rule_is_manual=False,
+                        simulation=False)
+
+        recur_paths = (Path(p) for p in args.recur_paths)
+        for entry in scan_fs(recur_paths, recursive=True):
+            self._apply(entry, args.rule_lkup,
+                        user_given_entry=False,
                         rule_is_manual=False,
                         simulation=False)
 
@@ -475,6 +488,18 @@ class Args:
                             help="manual entries to rename",
                             metavar="text",
                             nargs="*",
+                            default=[])
+        parser.add_argument("-s", "--scan",
+                            help="rename on files from given path, not recursive",
+                            metavar="path",
+                            action="append",
+                            dest="dir_paths",
+                            default=[])
+        parser.add_argument("-r", "--recursive",
+                            help="rename on files from given path, recursive",
+                            metavar="path",
+                            action="append",
+                            dest="recur_paths",
                             default=[])
         return parser
 
