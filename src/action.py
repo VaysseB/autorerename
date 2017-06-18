@@ -217,6 +217,7 @@ class Renamer:
 
         try:
             if action_mode.was_renamed:
+                dest.parent.mkdir(parents=False, exist_ok=True)
                 source.rename(dest)
             result = True
         except FileNotFoundError:

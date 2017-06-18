@@ -13,11 +13,13 @@ import engine
 
 
 def serialize_rule(rule: engine.Rule) -> dict:
+    # TODO add type in from of each value
     return {
         "guid": rule.guid,
         "id": rule.identifier_as_text,
         "rn": rule.renamer_as_text,
-        "name": rule.name
+        "name": rule.name,
+        "height": rule.height
     }
 
 
@@ -26,7 +28,8 @@ def deserialize_rule(rules: engine.Rules, data: dict) -> engine.Rule:
         id_rule=data["id"],
         rename_rule=data["rn"],
         guid=data["guid"],
-        name=data["name"]
+        name=data["name"],
+        height=data["height"]
     )
 
 

@@ -8,6 +8,7 @@ from pathlib import Path
 import logger
 from utils import *
 
+# TODO rename file to 'book'
 
 class Rule:
     """
@@ -19,6 +20,16 @@ class Rule:
         self.renamer = rename
         self.guid = guid
         self.name = None
+
+        # indicate the number of parts of the path to match
+        # if the rule were applying inner folder files, it would be 'depth'
+        # but as here it applies on the number of parent, I call it 'height'
+        # so, it means:
+        #  '/home/user/folder/file', height=0  -> 'file'
+        #  '/home/user/folder/file', height=1  -> 'folder/file'
+        #  '/home/user/folder/file', height=2  -> 'user/folder/file'
+        # ...
+        self.height = 0
 
     def name_prefix(self):
         if self.name:
@@ -41,8 +52,24 @@ class Rule:
     def __hash__(self):
         return hash(self.guid)
 
+    def analysed_path(self, path: Path) -> Path:
+        try:
+            return path.relative_to(path.parents[self.height])
+        except IndexError:
+            # if height is too much for the path, the rule cannot be applied
+            pass
+
+    def untouched_root(self, path: Path) -> Path:
+        try:
+            return path.parents[self.height]
+        except IndexError:
+            # if height is too much for the path, the rule cannot be applied
+            pass
+
     def match(self, path: Path):
-        return self.identifier.search(path.name)
+        text = self.analysed_path(path)
+        if text:
+            return self.identifier.search(str(text))
 
     def format(self, path: Path, match: re.match):
         """
@@ -52,14 +79,14 @@ class Rule:
         assert match is not None
 
         # get what is before and after the capture
-        prefix = path.name[:match.start()]
-        suffix = path.name[match.end():]
+        prefix = match.string[:match.start()]
+        suffix = match.string[match.end():]
 
         updated_name = self.renamer.format(None,
                                            *match.groups(),
                                            **match.groupdict())
 
-        return path.with_name(prefix + updated_name + suffix)
+        return self.untouched_root(path) / Path(prefix + updated_name + suffix)
 
 
 class Rules:
@@ -74,12 +101,18 @@ class Rules:
     def add(self, id_rule: str,
             rename_rule: str,
             guid=None,
-            name: str=None) -> bool:
+            name: str=None,
+            height: int=0) -> bool:
+
+        if height < 0:
+            logger.warn("height is negative: maybe later this will be used"
+                        " but right now, such situation is not implemented")
 
         # create the rule
         rule = Rule(re.compile(id_rule), rename_rule)
         rule.name = name
         rule.guid = guid
+        rule.height = height
         logger.info("add rule {}".format(rule.guid))
 
         # create guid if this is a new rule

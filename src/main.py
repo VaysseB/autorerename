@@ -85,7 +85,8 @@ class Commands:
         rule = rules.add(
             id_rule=args.id_rule,
             rename_rule=args.rename_rule,
-            name=getattr(args, "name", None))
+            name=getattr(args, "name", None),
+            height=args.height)
         return rule
 
 
@@ -224,6 +225,8 @@ class FileCommands(Commands):
         self.app.load_rules(args.rule_db_path)
         self.app.start_action(self.config.actlog_path, silent=False)
 
+        # TODO add scan
+
         for entry in (Path(p) for p in args.entries):
             self._apply(entry, args.rule_lkup,
                         user_given_entry=True,
@@ -283,6 +286,8 @@ class FileCommands(Commands):
         logger.info("action: log")
 
         self.app.open_action_log(self.config.actlog_path)
+
+        # TODO add cmd switch to print relative path from cwd
 
         # TODO add format input from cmd
         for line in self.app.action_log.read_iter():
@@ -578,6 +583,11 @@ class Args:
         parser.add_argument("name",
                             help="name of the rule (optional)",
                             nargs="?")
+        parser.add_argument("--height",
+                            help="number of parent in path the rule applies",
+                            type=int,
+                            default=0,
+                            metavar="x")
         return parser
 
     def install_list_rules(self, subparser):
