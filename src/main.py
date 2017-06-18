@@ -438,7 +438,7 @@ class Args:
 
     def _insert_silent_action_log(self, parser):
         return parser.add_argument(
-            "--silent-log",
+            "--silent",
             help="turn off action log",
             dest="silent_act_log",
             action="store_true")
