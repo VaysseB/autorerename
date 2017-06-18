@@ -11,7 +11,9 @@ def load_debug_conf():
 
 
 if load_debug_conf():
-    logging.config.fileConfig(Path("./log_conf_dev_console.ini").resolve())
+    root = Path(__file__).resolve()
+    src = root.parent.joinpath("./log_conf_dev_console.ini").resolve()
+    logging.config.fileConfig(str(src))
 
 
 # shorthand
