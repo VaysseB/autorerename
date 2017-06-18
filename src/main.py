@@ -659,6 +659,11 @@ class Args:
                             help="entry to test",
                             metavar="entry",
                             nargs="*")
+        parser.add_argument("--height",
+                            help="number of parent in path the rule applies",
+                            type=int,
+                            default=0,
+                            metavar="x")
         parser.add_argument("-s", "--scan",
                             help="test on files from given path, not recursive",
                             metavar="path",
