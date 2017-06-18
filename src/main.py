@@ -187,6 +187,20 @@ class FileCommands(Commands):
                         rule_is_manual=True,
                         simulation=True)
 
+        dir_paths = (Path(p) for p in args.dir_paths)
+        for entry in scan_fs(dir_paths, recursive=False):
+            self._apply(entry, rule.guid,
+                        user_given_entry=False,
+                        rule_is_manual=True,
+                        simulation=True)
+
+        recur_paths = (Path(p) for p in args.recur_paths)
+        for entry in scan_fs(recur_paths, recursive=True):
+            self._apply(entry, rule.guid,
+                        user_given_entry=False,
+                        rule_is_manual=True,
+                        simulation=True)
+
         self.app.end_action()
 
     def rename(self, args):
@@ -503,6 +517,18 @@ class Args:
                             help="entry to test",
                             metavar="entry",
                             nargs="*")
+        parser.add_argument("-s", "--scan",
+                            help="test on files from given path, not recursive",
+                            metavar="path",
+                            action="append",
+                            dest="dir_paths",
+                            default=[])
+        parser.add_argument("-r", "--recursive",
+                            help="test on files from given path, recursive",
+                            metavar="path",
+                            action="append",
+                            dest="recur_paths",
+                            default=[])
         return parser
 
     def install_rules(self, subparser):
