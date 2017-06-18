@@ -36,6 +36,7 @@ def abspath_from_conf(cf_path: Path, path: Path):
 
 
 def load_conf(cf_path: Path):
+    # TODO add default value for path when not configuration
     logger.info("load config file {}".format(cf_path))
     if not cf_path:
         return Conf()
